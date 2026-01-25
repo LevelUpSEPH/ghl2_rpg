@@ -32,10 +32,24 @@ HLRPG_Assets = {
         price = 1500,
         currency = "XP"
     },
-    ["perm_double_barrel"] = { 
-        name = "Double Barrel", 
-        desc = "Shotgun iki kat pellet sıkar.",
-        price = 8000, currency = "XP", group = "Permanent Upgrades",
-        modifier = "mod_double_pellet", modVal = 2
+    ["upg_fire_smg"] = { 
+        name = "Incendiary SMG", 
+        desc = "SMG mermileri hedefini yakar.", 
+        icon = "icon16/fire.png", 
+        price = 3000, currency = "XP", 
+        group = "Permanent Upgrades", 
+        type = "modifier", 
+        modID = "mod_fire_ammo", modVal = 30,
+        scope = "weapon_smg1"
     },
+    ["upg_splitter_shotgun"] = { 
+        name = "Splitter Shotgun", 
+        desc = "Pompalı saçma sayısını artırır.", 
+        icon = "icon16/bomb.png", 
+        price = 4500, currency = "XP", 
+        group = "Permanent Upgrades", 
+        type = "modifier", 
+        modID = "mod_double_pellet", modVal = 6,
+        scope = "weapon_shotgun"
+    }
 }

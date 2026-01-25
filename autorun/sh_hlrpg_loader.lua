@@ -67,6 +67,7 @@ LoadFile("hlrpg/modules/sv_inventory_logic.lua")
 LoadFile("hlrpg/modules/sv_equipment.lua")
 LoadFile("hlrpg/modules/sv_hat_equipment.lua")
 LoadFile("hlrpg/modules/sv_pet_equipment.lua")
+LoadFile("hlrpg/modules/sv_modifier_equipment.lua")
 
 LoadFile("hlrpg/modules/sv_test_commands.lua")
 
