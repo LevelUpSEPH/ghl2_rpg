@@ -28,6 +28,8 @@ end
 
 -- 1. Config
 LoadFile("hlrpg/config/sh_config.lua")
+LoadFile("hlrpg/core/sh_npc_names.lua")
+LoadFile("hlrpg/core/sh_difficulty_core.lua")
 
 -- 2. Core Sistemler
 LoadFile("hlrpg/core/sv_database.lua")
@@ -35,6 +37,7 @@ LoadFile("hlrpg/core/sv_player.lua")
 LoadFile("hlrpg/core/sh_modifiers.lua")
 LoadFile("hlrpg/core/sh_skills.lua")
 LoadFile("hlrpg/modules/sv_modifier_manager.lua")
+LoadFile("hlrpg/modules/sv_difficulty_manager.lua")
 LoadFile("hlrpg/modules/sv_combat_hook.lua")
 LoadFile("hlrpg/modules/cl_hud.lua")
 
@@ -42,10 +45,18 @@ LoadFile("hlrpg/modules/sv_rpg_system.lua")
 
 LoadFile("hlrpg/modules/sv_equipment.lua")
 
+LoadFile("hlrpg/modules/sv_npc_difficulty.lua")
+LoadFile("hlrpg/modules/cl_boss_hud.lua")
+LoadFile("hlrpg/modules/cl_npc_tags.lua")
+
 LoadFile("hlrpg/modules/cl_visuals.lua")
 LoadFile("hlrpg/modules/sv_skill_manager.lua")
 
 LoadFile("hlrpg/ui/cl_scoreboard.lua")
 LoadFile("hlrpg/ui/cl_menu.lua")
+LoadFile("hlrpg/ui/cl_difficulty_ui.lua")
+LoadFile("hlrpg/ui/cl_xp_notify.lua")
+LoadFile("hlrpg/ui/cl_killfeed_cleaner.lua")
+LoadFile("hlrpg/modules/sv_npc_damage.lua")
 
 print(">>> [HALF LIFE RPG] Hazir! <<<\n")

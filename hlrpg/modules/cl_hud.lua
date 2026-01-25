@@ -40,6 +40,14 @@ hook.Add("HUDPaint", "HLRPG_StrictHUD", function()
     draw.SimpleText(xpText, "HLRPG_HUD_XP", (ScrW() / 2) + 1, xpY + 3, Color(0, 0, 0, 255), TEXT_ALIGN_CENTER) -- Gölge
     draw.SimpleText(xpText, "HLRPG_HUD_XP", ScrW() / 2, xpY + 2, Color(255, 255, 255, 200), TEXT_ALIGN_CENTER)
 
+    local diffLevel = GetGlobalInt("HLRPG_CurrentDifficulty", 1)
+    local diffData = (HLRPG_DifficultyScales and HLRPG_DifficultyScales[diffLevel]) 
+
+    if diffData then
+        draw.SimpleText("MODE: " .. diffData.name, "HLRPG_HUD_Bold", 20, ScrH() - 40, diffData.color, TEXT_ALIGN_LEFT)
+    else
+        draw.SimpleText("MODE: INITIALIZING...", "HLRPG_HUD_Bold", 20, ScrH() - 40, Color(255,255,255), TEXT_ALIGN_LEFT)
+    end
 
     -- 3. ULT BAR (Health ve Armor Üstünde Hizalı)
     local ultW = 180 

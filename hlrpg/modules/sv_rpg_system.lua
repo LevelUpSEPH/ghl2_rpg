@@ -2,6 +2,8 @@
 
 if not SERVER then return end
 
+util.AddNetworkString("HLRPG_XPNotify")
+
 print("[HLRPG] Core RPG System Yukleniyor...")
 
 -- ==========================================
@@ -26,26 +28,6 @@ hook.Add("PlayerSpawn", "HLRPG_ApplyStats", function(ply)
         end
     end)
 end)
-
--- ==========================================
--- GELİŞMİŞ XP VE LEVEL ATLATMA FONKSİYONU
--- ==========================================
-
--- ==========================================
--- Gelişmiş Seviye Atlama (HEV Temalı)
--- ==========================================
-
--- ==========================================
--- Gelişmiş Seviye Atlama (Valve Intro Temalı)
--- ==========================================
-
--- ==========================================
--- Seviye Atlama (Garantili Valve Sesi)
--- ==========================================
-
--- ==========================================
--- Seviye Atlama (Kısa ve Vurucu Ses)
--- ==========================================
 
 local function PerformLevelUp(ply)
     local levelsGained = 0
@@ -84,36 +66,68 @@ local function PerformLevelUp(ply)
     end
 end
 
--- ==========================================
--- GÜNCELLENİŞ ÖLDÜRME HOOK'U
--- ==========================================
-hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
-    if IsValid(attacker) and attacker:IsPlayer() then
-        local xpGain = 10
-        local npcClass = npc:GetClass()
-        
-        -- XP Tablosu
-        local xpTable = {
-            ["npc_combine_s"] = 25,
-            ["npc_hunter"] = 150,
-            ["npc_strider"] = 1000, -- 1000 XP verir (Lv1 birini anında 3-4 level atlatır)
-            ["npc_zombie"] = 15,
-            ["npc_headcrab"] = 5,
-            ["npc_antlionguard"] = 300
-        }
-        
-        xpGain = xpTable[npcClass] or 10
+hook.Add("EntityTakeDamage", "HLRPG_TrackDamage", function(target, dmginfo)
+    local attacker = dmginfo:GetAttacker()
 
-        -- XP Ekle ve Fonksiyonu Çağır
-        attacker.HLRPG_XP = (attacker.HLRPG_XP or 0) + xpGain
-        attacker:SetNWInt("HLRPG_XP", attacker.HLRPG_XP)
+    if IsValid(target) and target:IsNPC() and IsValid(attacker) and attacker:IsPlayer() then
+        target.HLRPG_DamageTable = target.HLRPG_DamageTable or {}
         
-        -- Level atlama kontrolünü çalıştır
-        PerformLevelUp(attacker)
+        local dmgAmount = dmginfo:GetDamage()
         
-        -- Ulti şarjını da unutma
-        if attacker.AddUltCharge then
-            attacker:AddUltCharge(math.Clamp(xpGain * 0.2, 2, 50))
+        local actualDmg = math.min(dmgAmount, target:Health())
+        
+        target.HLRPG_DamageTable[attacker] = (target.HLRPG_DamageTable[attacker] or 0) + actualDmg
+    end
+end)
+
+-- addons/halflife_rpg/lua/hlrpg/modules/sv_rpg_system.lua
+
+-- addons/halflife_rpg/lua/hlrpg/modules/sv_rpg_system.lua
+
+hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
+    if not npc.HLRPG_DamageTable or table.Count(npc.HLRPG_DamageTable) == 0 then return end
+
+    -- NPC doğduğunda üzerine mühürlediğimiz sabit XP'yi al
+    local totalXPAward = npc.HLRPG_AwardXP or 10
+    
+    -- Sözlükten ismini alalım (Sözlük yoksa class ismini temizle)
+    local npcDisplayName = (HLRPG_GetNPCName and HLRPG_GetNPCName(npc)) or npc:GetClass():gsub("npc_", ""):upper()
+
+    -- 1. TOPLAM HASARI HESAPLA
+    local totalDamage = 0
+    for ply, dmg in pairs(npc.HLRPG_DamageTable) do
+        if IsValid(ply) then totalDamage = totalDamage + dmg end
+    end
+
+    -- 2. DAĞITIM VE BİLDİRİM
+    for ply, dmg in pairs(npc.HLRPG_DamageTable) do
+        if IsValid(ply) and ply:IsPlayer() then
+            local ratio = dmg / totalDamage
+            local xpGain = math.Round(totalXPAward * ratio)
+            local percentage = math.Round(ratio * 100)
+
+            if xpGain > 0 then
+                -- Stat Güncelleme
+                ply.HLRPG_XP = (ply.HLRPG_XP or 0) + xpGain
+                ply:SetNWInt("HLRPG_XP", ply.HLRPG_XP)
+                
+                -- Level Kontrolü
+                PerformLevelUp(ply)
+                
+                -- Ulti Şarjı
+                if ply.AddUltCharge then
+                    ply:AddUltCharge(math.Clamp(xpGain * 0.2, 2, 50))
+                end
+
+                net.Start("HLRPG_XPNotify")
+                net.WriteInt(xpGain, 32)
+                net.WriteInt(percentage, 16)
+                net.WriteString(npcDisplayName)
+                -- NPC rengini de gönderelim (sözlükten çekiyoruz)
+                local npcCol = (HLRPG_GetNPCColor and HLRPG_GetNPCColor(npc)) or Color(255, 255, 255)
+                net.WriteColor(npcCol)
+                net.Send(ply)
+            end
         end
     end
 end)
