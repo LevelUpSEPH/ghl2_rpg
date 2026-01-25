@@ -43,7 +43,6 @@ LoadFile("hlrpg/modules/cl_hud.lua")
 
 LoadFile("hlrpg/modules/sv_rpg_system.lua")
 
-LoadFile("hlrpg/modules/sv_equipment.lua")
 
 LoadFile("hlrpg/modules/sv_npc_difficulty.lua")
 LoadFile("hlrpg/modules/cl_boss_hud.lua")
@@ -62,8 +61,13 @@ LoadFile("hlrpg/ui/cl_player_hub.lua")
 LoadFile("hlrpg/modules/sv_npc_damage.lua")
 LoadFile("hlrpg/modules/sv_player_cleanup.lua")
 LoadFile("hlrpg/modules/sv_temp_points.lua")
+
 LoadFile("hlrpg/modules/sv_shop_logic.lua")
 LoadFile("hlrpg/modules/sv_inventory_logic.lua")
+LoadFile("hlrpg/modules/sv_equipment.lua")
+LoadFile("hlrpg/modules/sv_hat_equipment.lua")
+LoadFile("hlrpg/modules/sv_pet_equipment.lua")
+
 LoadFile("hlrpg/modules/sv_test_commands.lua")
 
 LoadFile("hlrpg/core/sh_central_assets.lua")

@@ -10,24 +10,15 @@ function HLRPG_Inventory_EquipRequest(ply, itemID)
     local itemData = HLRPG_Assets[itemID]
     if not itemData then return end
 
-    if not ply:GetNWBool("HLRPG_Owned_" .. itemID, false) then
-        ply:ChatPrint("[INV] Bu eşyaya sahip değilsin!")
-        return
-    end
+    local group = itemData.group
 
-    local equipType = ""
-    local equipValue = ""
-
-    if itemData.group == "Suits" then
-        equipType = "suit"
-        equipValue = itemID
-    elseif itemData.group == "Models" then
-        equipType = "model"
-        equipValue = itemData.model
+    if group == "Suits" then
+        HLRPG_ApplyEquipment(ply, "suit", itemID) -- Senin sv_equipment'taki suit logic'in
+    elseif group == "Hats" then
+        HLRPG_ApplyHat(ply, itemID) -- Yeni hat logic'i
+    elseif group == "Pets" then
+        HLRPG_ApplyPet(ply, itemID) -- Yeni pet logic'i
+    elseif group == "Models" then
+        HLRPG_ApplyEquipment(ply, "model", itemData.model) -- Karakter değişimi
     end
-    
-    net.Start("HLRPG_EquipItem")
-    net.WriteString(equipType)
-    net.WriteString(equipValue)
-    net.Send(ply)
 end

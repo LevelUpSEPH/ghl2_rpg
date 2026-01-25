@@ -40,10 +40,7 @@ concommand.Add("rpg_inventory_equip", function(ply, cmd, args)
 
     if not ply:GetNWBool("HLRPG_Owned_" .. itemID, false) then return end
 
-    local equipType = (itemData.group == "Suits") and "suit" or "model"
-    local equipValue = (equipType == "suit") and itemID or itemData.model
-
-    HLRPG_ApplyEquipment(ply, equipType, equipValue)
+    HLRPG_Inventory_EquipRequest(ply, itemID)
 end)
 
 concommand.Add("rpg_give_money", function(ply, cmd, args)
