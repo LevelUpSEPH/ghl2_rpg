@@ -28,52 +28,92 @@ hook.Add("PlayerSpawn", "HLRPG_ApplyStats", function(ply)
 end)
 
 -- ==========================================
--- 2. XP VE LEVEL SİSTEMİ (GÜNCELLENDİ)
+-- GELİŞMİŞ XP VE LEVEL ATLATMA FONKSİYONU
 -- ==========================================
 
+-- ==========================================
+-- Gelişmiş Seviye Atlama (HEV Temalı)
+-- ==========================================
+
+-- ==========================================
+-- Gelişmiş Seviye Atlama (Valve Intro Temalı)
+-- ==========================================
+
+-- ==========================================
+-- Seviye Atlama (Garantili Valve Sesi)
+-- ==========================================
+
+-- ==========================================
+-- Seviye Atlama (Kısa ve Vurucu Ses)
+-- ==========================================
+
+local function PerformLevelUp(ply)
+    local levelsGained = 0
+    
+    while ply.HLRPG_XP >= (ply.HLRPG_Level * 100) do
+        local required = ply.HLRPG_Level * 100
+        ply.HLRPG_XP = ply.HLRPG_XP - required
+        ply.HLRPG_Level = ply.HLRPG_Level + 1
+        levelsGained = levelsGained + 1
+    end
+
+    if levelsGained > 0 then
+        ply:SetNWInt("HLRPG_Level", ply.HLRPG_Level)
+        ply:SetNWInt("HLRPG_XP", ply.HLRPG_XP)
+        ply:SetNWInt("HLRPG_MaxXP", ply.HLRPG_Level * 100)
+
+        local newMax = 100 + ((ply.HLRPG_Level - 1) * 10)
+        ply:SetMaxHealth(newMax)
+        ply:SetHealth(newMax)
+
+        -- SES SEÇENEĞİ: 
+        -- "ambient/levels/citadel/weapon_disintegrate2.wav" -> Çok havalı bir teknolojik ses
+        -- "items/suitchargeok1.wav" -> Klasik HEV onayı
+        
+        -- Ben burada hem kısa hem de 'güçlenme' hissi veren şu sesi seçtim:
+        ply:EmitSound("ambient/levels/citadel/weapon_disintegrate2.wav", 100, 120)
+        ply:EmitSound("items/suitchargeok1.wav", 80, 100) -- İkisini karıştırınca çok RPG vari oluyor
+
+        -- Görsel Efekt
+        local ed = EffectData()
+        ed:SetOrigin(ply:GetPos() + Vector(0,0,20))
+        ed:SetScale(1)
+        util.Effect("cball_explode", ed)
+
+        ply:ChatPrint(">>> SEVİYE ATLADIN: " .. ply.HLRPG_Level .. " <<<")
+    end
+end
+
+-- ==========================================
+-- GÜNCELLENİŞ ÖLDÜRME HOOK'U
+-- ==========================================
 hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
     if IsValid(attacker) and attacker:IsPlayer() then
-        
-        -- XP HESABI
         local xpGain = 10
         local npcClass = npc:GetClass()
-        if npcClass == "npc_combine_s" then xpGain = 25 end
-        if npcClass == "npc_hunter" then xpGain = 150 end
-        if npcClass == "npc_strider" then xpGain = 500 end
-        if npcClass == "npc_zombie" then xpGain = 15 end
-        if npcClass == "npc_headcrab" then xpGain = 5 end
+        
+        -- XP Tablosu
+        local xpTable = {
+            ["npc_combine_s"] = 25,
+            ["npc_hunter"] = 150,
+            ["npc_strider"] = 1000, -- 1000 XP verir (Lv1 birini anında 3-4 level atlatır)
+            ["npc_zombie"] = 15,
+            ["npc_headcrab"] = 5,
+            ["npc_antlionguard"] = 300
+        }
+        
+        xpGain = xpTable[npcClass] or 10
 
-        -- XP EKLE
-        attacker.HLRPG_XP = attacker.HLRPG_XP + xpGain
+        -- XP Ekle ve Fonksiyonu Çağır
+        attacker.HLRPG_XP = (attacker.HLRPG_XP or 0) + xpGain
         attacker:SetNWInt("HLRPG_XP", attacker.HLRPG_XP)
-        attacker:PrintMessage(HUD_PRINTCENTER, "+" .. xpGain .. " XP")
-
-        -- [YENİ] ULTI CHARGE ENTEGRASYONU
-        -- Warp Cannon şu an aktif değilse öldürme başına şarj ver
-        if not attacker:GetNWBool("HLRPG_IsCastingUlt", false) then
-            -- XP'nin yarısı kadar da Ulti şarjı gelsin
-            local chargeGain = math.Clamp(xpGain * 0.5, 5, 20) 
-            attacker:AddUltCharge(chargeGain)
-        end
-
-        -- LEVEL UP KONTROLÜ
-        local requiredXP = attacker.HLRPG_Level * 100
-        attacker:SetNWInt("HLRPG_MaxXP", requiredXP) -- HUD Barı için güncelle
-
-        if attacker.HLRPG_XP >= requiredXP then
-            attacker.HLRPG_XP = attacker.HLRPG_XP - requiredXP
-            attacker.HLRPG_Level = attacker.HLRPG_Level + 1
-            
-            attacker:SetNWInt("HLRPG_Level", attacker.HLRPG_Level)
-            attacker:SetNWInt("HLRPG_XP", attacker.HLRPG_XP)
-            attacker:SetNWInt("HLRPG_MaxXP", attacker.HLRPG_Level * 100)
-            
-            attacker:EmitSound("music/hltv_stinger3.wav")
-            attacker:ChatPrint(">>> TEBRİKLER! SEVİYE ATLADIN: " .. attacker.HLRPG_Level)
-            
-            local newMax = 100 + ((attacker.HLRPG_Level - 1) * 10)
-            attacker:SetMaxHealth(newMax)
-            attacker:SetHealth(newMax)
+        
+        -- Level atlama kontrolünü çalıştır
+        PerformLevelUp(attacker)
+        
+        -- Ulti şarjını da unutma
+        if attacker.AddUltCharge then
+            attacker:AddUltCharge(math.Clamp(xpGain * 0.2, 2, 50))
         end
     end
 end)
