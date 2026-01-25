@@ -58,7 +58,7 @@ net.Receive("HLRPG_OpenMenu", function()
         end
     end
     
-    sheet:AddSheet("Kıyafetler", panelModel, "icon16/user_suit.png")
+    sheet:AddSheet("Karakterler", panelModel, "icon16/user_suit.png")
 
 
     -- === SEKME 2: ŞAPKALAR ===

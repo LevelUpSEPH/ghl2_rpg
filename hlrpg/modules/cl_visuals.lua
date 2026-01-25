@@ -5,22 +5,35 @@ if not CLIENT then return end
 local Visuals = {}
 local INVISIBLE_MAT = "models/effects/vol_light001"
 
--- YARDIMCI: Temizlik Fonksiyonu (Tekrar tekrar yazmamak için)
+-- YARDIMCI: Hiyerarşi Bulucu
+local function GetAllChildrenBones(ent, parentID)
+    local children = {}
+    local count = ent:GetBoneCount()
+    
+    for i = 0, count - 1 do
+        local parent = ent:GetBoneParent(i)
+        if parent == parentID then
+            table.insert(children, i)
+            local grandChildren = GetAllChildrenBones(ent, i)
+            for _, gc in ipairs(grandChildren) do
+                table.insert(children, gc)
+            end
+        end
+    end
+    return children
+end
+
 local function RemoveVisuals(sid)
     if not Visuals[sid] then return end
-    
     local data = Visuals[sid]
     if IsValid(data.Suit) then data.Suit:Remove() end
     if IsValid(data.FakeHead) then data.FakeHead:Remove() end
     
-    -- Oyuncu hala oyundaysa (disconnect olmadıysa) materyalini düzelt
     local ply = player.GetBySteamID(sid)
     if IsValid(ply) then
         ply:SetMaterial("")
         ply:SetRenderMode(RENDERMODE_NORMAL)
         ply:SetColor(Color(255, 255, 255, 255))
-        
-        -- Silahı da düzelt
         local wep = ply:GetActiveWeapon()
         if IsValid(wep) then
             wep:SetMaterial("")
@@ -28,40 +41,35 @@ local function RemoveVisuals(sid)
             wep:SetColor(Color(255, 255, 255, 255))
         end
     end
-
     Visuals[sid] = nil
 end
 
--- NETWORK: Sunucudan gelen zırh bilgisini al
 net.Receive("HLRPG_Sync_Suit", function()
     local ply = net.ReadEntity()
     local suitModel = net.ReadString()
-    
-    if IsValid(ply) then
-        UpdatePlayerVisuals(ply, suitModel)
-    end
+    if IsValid(ply) then UpdatePlayerVisuals(ply, suitModel) end
 end)
 
--- GÖRSEL GÜNCELLEME
 function UpdatePlayerVisuals(ply, suitPath)
     local sid = ply:SteamID()
-    
-    -- 1. Önce eski kalıntıları temizle (Crash Fix)
     RemoveVisuals(sid)
 
-    -- 2. Eğer zırh çıkarıldıysa ("none"), temizledik ve çıkıyoruz.
-    if not suitPath or suitPath == "none" or suitPath == "" then
-        return
+    if not suitPath or suitPath == "none" or suitPath == "" then return end
+
+    local suitConfig = nil
+    for _, s in ipairs(HLRPG.Config.Suits) do
+        if s.model == suitPath then suitConfig = s; break end
     end
+    
+    local headOffset = (suitConfig and suitConfig.head_offset) or Vector(0,0,0)
+    
+    local hideSuitHands = (suitConfig and suitConfig.hide_suit_hands) or false
 
-    -- 3. Yeni kayıt oluştur
-    Visuals[sid] = {
-        Active = true,
-        CachedHeadID_Suit = nil,
-        CachedHeadID_Fake = nil
-    }
+    Visuals[sid] = { Active = true }
 
-    -- 4. SUIT YARAT
+    -- ====================================================
+    -- 1. SUIT (ZIRH)
+    -- ====================================================
     local suit = ClientsideModel(suitPath)
     if IsValid(suit) then
         suit:SetPos(ply:GetPos())
@@ -69,24 +77,78 @@ function UpdatePlayerVisuals(ply, suitPath)
         suit:AddEffects(EF_BONEMERGE)
         suit:SetModelScale(1.01, 0)
         
+        -- A) GİZLENECEK KEMİKLERİ HAZIRLA
+        local bonesToHide = {}      -- Basitçe gizlenecekler (Kafa gibi)
+        local handChildren = {}     -- Ebeveynine (Bileğe) yapıştırılacaklar
+
+        -- Kafayı ekle (Basit gizleme)
         local hBone = suit:LookupBone("ValveBiped.Bip01_Head1")
-        if hBone then
-            Visuals[sid].CachedHeadID_Suit = hBone
-            
-            -- CALLBACK (Kafayı Yok Et)
-            suit:AddCallback("BuildBonePositions", function(ent, nbones)
-                -- CRASH FIX: Visuals[sid] silindiyse çalışmayı durdur!
-                if not Visuals[sid] or not IsValid(ent) then return end
-                
-                local id = Visuals[sid].CachedHeadID_Suit
-                local m = ent:GetBoneMatrix(id)
-                if m then m:Scale(Vector(0,0,0)); ent:SetBoneMatrix(id, m) end
-            end)
+        if hBone then bonesToHide[hBone] = true end
+
+        -- Elleri İşle (Zombi Fix)
+        local lHandID, rHandID
+        if hideSuitHands then
+            lHandID = suit:LookupBone("ValveBiped.Bip01_L_Hand")
+            rHandID = suit:LookupBone("ValveBiped.Bip01_R_Hand")
+
+            -- Sol el parmaklarını topla -> Sol El'e (lHandID) zimmetle
+            if lHandID then
+                bonesToHide[lHandID] = true -- Eli de gizle
+                for _, child in ipairs(GetAllChildrenBones(suit, lHandID)) do
+                    handChildren[child] = lHandID -- Bu çocuk, bu babaya gidecek
+                end
+            end
+
+            -- Sağ el parmaklarını topla -> Sağ El'e (rHandID) zimmetle
+            if rHandID then
+                bonesToHide[rHandID] = true
+                for _, child in ipairs(GetAllChildrenBones(suit, rHandID)) do
+                    handChildren[child] = rHandID
+                end
+            end
         end
+        
+        Visuals[sid].SuitSimpleHide = bonesToHide
+        Visuals[sid].SuitHandChildren = handChildren
+
+        -- CALLBACK
+        suit:AddCallback("BuildBonePositions", function(ent, nbones)
+            if not Visuals[sid] or not IsValid(ent) then return end
+            
+            -- 1. BASİT GİZLEME (Kafa, Bilekler)
+            -- Bunlar zaten doğru yerde (Bonemerge), sadece küçült.
+            for bid, _ in pairs(Visuals[sid].SuitSimpleHide) do
+                local m = ent:GetBoneMatrix(bid)
+                if m then 
+                    m:Scale(Vector(0.001, 0.001, 0.001))
+                    ent:SetBoneMatrix(bid, m) 
+                end
+            end
+
+            -- 2. KOPYALA YAPIŞTIR (Parmaklar -> Bileğe)
+            -- Void'deki parmak matrisini OKUMA. Bilek matrisini AL, parmağa YAZ.
+            for childID, parentID in pairs(Visuals[sid].SuitHandChildren) do
+                local parentMatrix = ent:GetBoneMatrix(parentID)
+                
+                if parentMatrix then
+                    -- Matrisin bir kopyasını oluştur ki orijinal bileği bozmayalım
+                    local newM = Matrix(parentMatrix) 
+                    
+                    -- Kopyayı küçült
+                    newM:Scale(Vector(0.001, 0.001, 0.001))
+                    
+                    -- Çocuğa (Parmağa) bu yeni matrisi zorla
+                    ent:SetBoneMatrix(childID, newM)
+                end
+            end
+        end)
+        
         Visuals[sid].Suit = suit
     end
 
-    -- 5. FAKE HEAD YARAT
+    -- ====================================================
+    -- 2. FAKE HEAD (SAHTE KAFA)
+    -- ====================================================
     local head = ClientsideModel(ply:GetModel())
     if IsValid(head) then
         head:SetPos(ply:GetPos())
@@ -94,71 +156,76 @@ function UpdatePlayerVisuals(ply, suitPath)
         head:AddEffects(EF_BONEMERGE)
         
         local hBone = head:LookupBone("ValveBiped.Bip01_Head1")
-        if hBone then
-            Visuals[sid].CachedHeadID_Fake = hBone
+        
+        if not hBone then
+            head:Remove()
+            Visuals[sid].FakeHead = nil
+        else
+            -- Görünür Listesi
+            local visibleBones = {}
+            visibleBones[hBone] = true
+            for _, id in ipairs(GetAllChildrenBones(head, hBone)) do visibleBones[id] = true end
             
-            -- CALLBACK (Kafa Hariç Her Şeyi Yok Et)
+            local nBone = head:LookupBone("ValveBiped.Bip01_Neck1")
+            if nBone then
+                visibleBones[nBone] = true
+                for _, id in ipairs(GetAllChildrenBones(head, nBone)) do visibleBones[id] = true end
+            end
+            
+            Visuals[sid].CachedHeadID_Fake = hBone
+            Visuals[sid].VisibleBones = visibleBones
+            
             head:AddCallback("BuildBonePositions", function(ent, nbones)
-                -- CRASH FIX: Güvenlik Kontrolü
-                if not Visuals[sid] or not IsValid(ent) then return end
+                if not Visuals[sid] or not IsValid(ent) or not IsValid(ply) then return end
                 
-                local hid = Visuals[sid].CachedHeadID_Fake
                 for i = 0, nbones - 1 do
-                    if i ~= hid then
+                    if Visuals[sid].VisibleBones[i] then
+                        -- GÖRÜNÜR: Offset varsa uygula
+                        if i == hBone and headOffset ~= Vector(0,0,0) then
+                            local m = ent:GetBoneMatrix(i)
+                            if m then m:Translate(headOffset); ent:SetBoneMatrix(i, m) end
+                        end
+                    else
+                        -- GİZLİ (VÜCUT): SADECE KÜÇÜLT!
+                        -- BURADA 'SetTranslation' YOK! VÜCUT BOZULMAYACAK.
                         local m = ent:GetBoneMatrix(i)
-                        if m then m:Scale(Vector(0,0,0)); ent:SetBoneMatrix(i, m) end
+                        if m then
+                            m:Scale(Vector(0.001, 0.001, 0.001))
+                            ent:SetBoneMatrix(i, m)
+                        end
                     end
                 end
             end)
+            Visuals[sid].FakeHead = head
         end
-        Visuals[sid].FakeHead = head
     end
 end
 
--- THINK: DÖNGÜ VE KONTROLLER
+-- THINK LOOP
 hook.Add("Think", "HLRPG_Global_Visual_Enforce", function()
     for sid, data in pairs(Visuals) do
         local ply = player.GetBySteamID(sid)
-        
-        -- KONTROL 1: Oyuncu çıktıysa temizle
-        if not IsValid(ply) then 
-            RemoveVisuals(sid)
-            continue 
-        end
-        
-        -- KONTROL 2: Oyuncu ÖLDÜYSE temizle (GHOST BUG FIX)
-        -- Alive() kontrolü sayesinde ölür ölmez modeller silinir.
-        if not ply:Alive() then
+        if not IsValid(ply) or not ply:Alive() then
             RemoveVisuals(sid)
             continue
         end
-        
-        -- Optimizasyon: Oyuncu çizilmiyorsa (uzaktaysa) işlem yapma
         if ply:IsDormant() then continue end
 
-        -- GÖRÜNMEZLİK VE SİLAH YÖNETİMİ
-        if ply:GetMaterial() ~= INVISIBLE_MAT then
-            ply:SetMaterial(INVISIBLE_MAT)
-        end
+        if ply:GetMaterial() ~= INVISIBLE_MAT then ply:SetMaterial(INVISIBLE_MAT) end
         
         local wep = ply:GetActiveWeapon()
         if IsValid(wep) then
             if wep:GetMaterial() == INVISIBLE_MAT then wep:SetMaterial("") end
-            if wep:GetColor().a ~= 255 then 
+            if wep:GetColor().a ~= 255 then
                 wep:SetColor(Color(255,255,255,255))
-                wep:SetRenderMode(RENDERMODE_NORMAL) 
+                wep:SetRenderMode(RENDERMODE_NORMAL)
             end
         end
     end
 end)
 
--- EKSTRA GÜVENLİK: Ölüm Anı (Ragdoll düzgün çıksın diye)
-hook.Add("PostPlayerDeath", "HLRPG_Cleanup_OnDeath", function(ply)
+hook.Add("PostPlayerDeath", "HLRPG_Death_Cleanup", function(ply)
     local sid = ply:SteamID()
-    if Visuals[sid] then
-        RemoveVisuals(sid)
-    end
-    
-    -- Ragdoll materyali bozuk çıkmasın diye ölürken de reset atıyoruz
+    if Visuals[sid] then RemoveVisuals(sid) end
     ply:SetMaterial("")
 end)

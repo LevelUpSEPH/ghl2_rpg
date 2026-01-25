@@ -32,12 +32,18 @@ LoadFile("hlrpg/config/sh_config.lua")
 -- 2. Core Sistemler
 LoadFile("hlrpg/core/sv_database.lua")
 LoadFile("hlrpg/core/sv_player.lua")
+LoadFile("hlrpg/core/sh_modifiers.lua")
+LoadFile("hlrpg/core/sh_skills.lua")
+LoadFile("hlrpg/modules/sv_modifier_manager.lua")
+LoadFile("hlrpg/modules/sv_combat_hook.lua")
+LoadFile("hlrpg/modules/cl_hud.lua")
 
 LoadFile("hlrpg/modules/sv_rpg_system.lua")
 
 LoadFile("hlrpg/modules/sv_equipment.lua")
 
 LoadFile("hlrpg/modules/cl_visuals.lua")
+LoadFile("hlrpg/modules/sv_skill_manager.lua")
 
 LoadFile("hlrpg/ui/cl_scoreboard.lua")
 LoadFile("hlrpg/ui/cl_menu.lua")
