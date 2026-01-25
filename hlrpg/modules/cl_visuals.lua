@@ -223,9 +223,3 @@ hook.Add("Think", "HLRPG_Global_Visual_Enforce", function()
         end
     end
 end)
-
-hook.Add("PostPlayerDeath", "HLRPG_Death_Cleanup", function(ply)
-    local sid = ply:SteamID()
-    if Visuals[sid] then RemoveVisuals(sid) end
-    ply:SetMaterial("")
-end)

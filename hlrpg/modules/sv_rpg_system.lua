@@ -31,39 +31,29 @@ end)
 
 local function PerformLevelUp(ply)
     local levelsGained = 0
+    local currentLevel = ply.HLRPG_Level or 1
     
-    while ply.HLRPG_XP >= (ply.HLRPG_Level * 100) do
-        local required = ply.HLRPG_Level * 100
-        ply.HLRPG_XP = ply.HLRPG_XP - required
-        ply.HLRPG_Level = ply.HLRPG_Level + 1
+    -- Sözlükten bir sonraki seviye gereksinimini al
+    -- XP harcanınca seviye düşmemesi için sadece 'ileriye' doğru kontrol yapar
+    while ply.HLRPG_XP >= HLRPG_GetRequiredXP(currentLevel + levelsGained) do
         levelsGained = levelsGained + 1
     end
 
     if levelsGained > 0 then
+        ply.HLRPG_Level = currentLevel + levelsGained
         ply:SetNWInt("HLRPG_Level", ply.HLRPG_Level)
-        ply:SetNWInt("HLRPG_XP", ply.HLRPG_XP)
-        ply:SetNWInt("HLRPG_MaxXP", ply.HLRPG_Level * 100)
 
-        local newMax = 100 + ((ply.HLRPG_Level - 1) * 10)
+        -- Stat Güncelleme
+        local newMax = 100 + ((ply.HLRPG_Level - 1) * 10) + (ply.HLRPG_BonusHP or 0)
         ply:SetMaxHealth(newMax)
         ply:SetHealth(newMax)
 
-        -- SES SEÇENEĞİ: 
-        -- "ambient/levels/citadel/weapon_disintegrate2.wav" -> Çok havalı bir teknolojik ses
-        -- "items/suitchargeok1.wav" -> Klasik HEV onayı
-        
-        -- Ben burada hem kısa hem de 'güçlenme' hissi veren şu sesi seçtim:
         ply:EmitSound("ambient/levels/citadel/weapon_disintegrate2.wav", 100, 120)
-        ply:EmitSound("items/suitchargeok1.wav", 80, 100) -- İkisini karıştırınca çok RPG vari oluyor
-
-        -- Görsel Efekt
-        local ed = EffectData()
-        ed:SetOrigin(ply:GetPos() + Vector(0,0,20))
-        ed:SetScale(1)
-        util.Effect("cball_explode", ed)
-
         ply:ChatPrint(">>> SEVİYE ATLADIN: " .. ply.HLRPG_Level .. " <<<")
     end
+
+    -- HUD/Scoreboard için gereken bar sınırını güncelle
+    ply:SetNWInt("HLRPG_MaxXP", HLRPG_GetRequiredXP(ply.HLRPG_Level))
 end
 
 hook.Add("EntityTakeDamage", "HLRPG_TrackDamage", function(target, dmginfo)
@@ -79,10 +69,6 @@ hook.Add("EntityTakeDamage", "HLRPG_TrackDamage", function(target, dmginfo)
         target.HLRPG_DamageTable[attacker] = (target.HLRPG_DamageTable[attacker] or 0) + actualDmg
     end
 end)
-
--- addons/halflife_rpg/lua/hlrpg/modules/sv_rpg_system.lua
-
--- addons/halflife_rpg/lua/hlrpg/modules/sv_rpg_system.lua
 
 hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
     if not npc.HLRPG_DamageTable or table.Count(npc.HLRPG_DamageTable) == 0 then return end
@@ -110,6 +96,10 @@ hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
                 -- Stat Güncelleme
                 ply.HLRPG_XP = (ply.HLRPG_XP or 0) + xpGain
                 ply:SetNWInt("HLRPG_XP", ply.HLRPG_XP)
+
+                if HLRPG_AddTempPoints then
+                    HLRPG_AddTempPoints(ply, xpGain)
+                end
                 
                 -- Level Kontrolü
                 PerformLevelUp(ply)

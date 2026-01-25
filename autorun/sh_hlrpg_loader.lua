@@ -57,6 +57,12 @@ LoadFile("hlrpg/ui/cl_menu.lua")
 LoadFile("hlrpg/ui/cl_difficulty_ui.lua")
 LoadFile("hlrpg/ui/cl_xp_notify.lua")
 LoadFile("hlrpg/ui/cl_killfeed_cleaner.lua")
+LoadFile("hlrpg/ui/cl_player_hub.lua")
+
 LoadFile("hlrpg/modules/sv_npc_damage.lua")
+LoadFile("hlrpg/modules/sv_player_cleanup.lua")
+LoadFile("hlrpg/modules/sv_temp_points.lua")
+
+LoadFile("hlrpg/core/sh_central_assets.lua")
 
 print(">>> [HALF LIFE RPG] Hazir! <<<\n")

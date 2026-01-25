@@ -1,135 +1,135 @@
 -- addons/halflife_rpg/lua/hlrpg/ui/cl_scoreboard.lua
-
-if not CLIENT then return end -- Sadece oyuncu tarafında çalışır
+if not CLIENT then return end
 
 local BoardPanel = nil
 
--- Scoreboard'un içini boyayan ve listeyi oluşturan fonksiyon
 local function CreateScoreboard()
-    -- Eğer zaten açıksa tekrar yaratma
     if IsValid(BoardPanel) then BoardPanel:Remove() end
 
-    -- 1. ANA ÇERÇEVE (Arka Plan)
     BoardPanel = vgui.Create("DPanel")
-    BoardPanel:SetSize(900, 600)
+    BoardPanel:SetSize(950, 650)
     BoardPanel:Center()
     
-    -- Paint fonksiyonunu override ederek (ezerek) görünümü özelleştiriyoruz
     BoardPanel.Paint = function(self, w, h)
-        -- Yarı saydam siyah arka plan
         draw.RoundedBox(8, 0, 0, w, h, Color(20, 20, 20, 240))
-        
-        -- Üst Başlık Şeridi
         draw.RoundedBoxEx(8, 0, 0, w, 80, Color(40, 40, 40, 255), true, true, false, false)
         
-        -- Başlık Yazısı
         draw.SimpleText("HALF-LIFE 2: RPG CAMPAIGN", "DermaLarge", 20, 20, Color(255, 180, 0), TEXT_ALIGN_LEFT)
-        draw.SimpleText("Sunucu Durumu: Aktif", "DermaDefault", 22, 50, Color(200, 200, 200), TEXT_ALIGN_LEFT)
         
-        -- Sütun Başlıkları (Header)
+        -- Dünya Zorluk Durumu
+        local diffLevel = GetGlobalInt("HLRPG_CurrentDifficulty", 1)
+        local diffName = (HLRPG_DifficultyScales and HLRPG_DifficultyScales[diffLevel]) and HLRPG_DifficultyScales[diffLevel].name or "NORMAL"
+        draw.SimpleText("Zorluk: " .. diffName, "DermaDefault", 22, 50, Color(200, 200, 200), TEXT_ALIGN_LEFT)
+        
+        -- Sütun Başlıkları
         draw.SimpleText("OYUNCU", "DermaDefaultBold", 80, 90, Color(150, 150, 150))
-        draw.SimpleText("SEVİYE", "DermaDefaultBold", 400, 90, Color(150, 150, 150))
-        draw.SimpleText("XP DURUMU", "DermaDefaultBold", 500, 90, Color(150, 150, 150))
-        draw.SimpleText("PING", "DermaDefaultBold", 800, 90, Color(150, 150, 150))
+        draw.SimpleText("SEVİYE", "DermaDefaultBold", 350, 90, Color(150, 150, 150))
+        draw.SimpleText("XP (WALLET / GOAL)", "DermaDefaultBold", 450, 90, Color(150, 150, 150))
+        draw.SimpleText("TEMP POINTS", "DermaDefaultBold", 680, 90, Color(0, 255, 255))
+        draw.SimpleText("PING", "DermaDefaultBold", 880, 90, Color(150, 150, 150))
         
-        -- Ayırıcı Çizgi
         surface.SetDrawColor(100, 100, 100, 100)
         surface.DrawLine(20, 110, w-20, 110)
     end
 
-    -- 2. KAYDIRILABİLİR LİSTE (Scroll Panel)
     local Scroll = vgui.Create("DScrollPanel", BoardPanel)
     Scroll:SetPos(20, 120)
-    Scroll:SetSize(860, 460)
+    Scroll:SetSize(910, 510)
 
-    -- 3. OYUNCULARI LİSTELE
-    -- Serverdaki herkesi döngüye alıp satır oluşturuyoruz
     for _, ply in ipairs(player.GetAll()) do
-        
-        -- Satır Paneli
         local Row = Scroll:Add("DPanel")
         Row:Dock(TOP)
-        Row:DockMargin(0, 0, 0, 5) -- Satırlar arası boşluk
+        Row:DockMargin(0, 0, 0, 5)
         Row:SetHeight(50)
-        
         Row.Paint = function(self, w, h)
-            -- Satır rengi (Hafif gri)
             draw.RoundedBox(4, 0, 0, w, h, Color(60, 60, 60, 200))
         end
 
-        -- Avatar (Profil Resmi)
+        -- Avatar & İsim
         local Avatar = vgui.Create("AvatarImage", Row)
         Avatar:SetPos(5, 5)
         Avatar:SetSize(40, 40)
         Avatar:SetPlayer(ply, 64)
 
-        -- Oyuncu İsmi
         local NameLabel = vgui.Create("DLabel", Row)
         NameLabel:SetPos(60, 15)
         NameLabel:SetFont("DermaDefaultBold")
         NameLabel:SetText(ply:Nick())
-        NameLabel:SetColor(Color(255, 255, 255))
         NameLabel:SizeToContents()
 
-        -- **LEVEL GÖSTERGESİ** (Server'dan gelen veriyi burada okuyoruz)
-        local LevelLabel = vgui.Create("DLabel", Row)
-        LevelLabel:SetPos(400, 12)
-        -- GetNWInt: Networked Integer (Ağ Değişkeni)
+        -- Seviye
         local level = ply:GetNWInt("HLRPG_Level", 1) 
+        local LevelLabel = vgui.Create("DLabel", Row)
+        LevelLabel:SetPos(350, 12)
         LevelLabel:SetText("Lv. " .. level)
         LevelLabel:SetFont("DermaLarge")
-        LevelLabel:SetColor(Color(255, 180, 0)) -- Altın rengi
+        LevelLabel:SetColor(Color(255, 180, 0))
         LevelLabel:SizeToContents()
 
-        -- **XP BAR** (Görsel Bar)
-        local XPAmount = ply:GetNWInt("HLRPG_XP", 0)
-        local XPReq = level * 100 -- Level formülümüz (Lv * 100)
-        local XPPercent = math.Clamp(XPAmount / XPReq, 0, 1) -- 0 ile 1 arası oran
+        -- **XP Bar & Dictionary Fix**
+        local xp = ply:GetNWInt("HLRPG_XP", 0)
+        local reqXP = 100 -- Fallback
+        if HLRPG_GetRequiredXP then
+            reqXP = HLRPG_GetRequiredXP(level)
+        end
 
-        -- XP Barının Arka Planı
+        local XPPercent = math.Clamp(xp / reqXP, 0, 1)
+
         local BarBG = vgui.Create("DPanel", Row)
-        BarBG:SetPos(500, 15)
+        BarBG:SetPos(450, 15)
         BarBG:SetSize(200, 20)
         BarBG.Paint = function(self, w, h)
-            -- Siyah zemin
             draw.RoundedBox(4, 0, 0, w, h, Color(0, 0, 0, 150))
-            -- Doluluk oranı (Yeşil)
             draw.RoundedBox(4, 0, 0, w * XPPercent, h, Color(0, 200, 0, 200))
+            draw.SimpleText(xp .. " / " .. reqXP, "DermaDefault", w/2, h/2, Color(255,255,255), 1, 1)
         end
-        
-        -- XP Yazısı (Barın üstüne)
-        local XPLabel = vgui.Create("DLabel", BarBG)
-        XPLabel:SetText(XPAmount .. " / " .. XPReq)
-        XPLabel:SetColor(Color(255, 255, 255))
-        XPLabel:Center()
+
+        -- **TEMP POINTS GÖSTERGESİ**
+        local tp = ply:GetNWInt("HLRPG_TempPoints", 0)
+        local TPLabel = vgui.Create("DLabel", Row)
+        TPLabel:SetPos(680, 15)
+        TPLabel:SetText(tp .. " TP")
+        TPLabel:SetFont("DermaDefaultBold")
+        TPLabel:SetColor(Color(0, 255, 255))
+        TPLabel:SizeToContents()
+
+        -- **QUICK SHOP BUTONU**
+        if ply == LocalPlayer() then
+            local ShopBtn = vgui.Create("DButton", Row)
+            ShopBtn:SetPos(760, 10)
+            ShopBtn:SetSize(80, 30)
+            ShopBtn:SetText("SHOP")
+            ShopBtn:SetFont("DermaDefaultBold")
+            ShopBtn:SetTextColor(Color(255, 255, 255))
+            ShopBtn.Paint = function(s, w, h)
+                draw.RoundedBox(4, 0, 0, w, h, s:IsHovered() and Color(0, 150, 255) or Color(0, 100, 200))
+            end
+            ShopBtn.DoClick = function()
+                if OpenPlayerHub then 
+                    OpenPlayerHub()
+                    BoardPanel:Hide() 
+                end     
+            end
+        end
 
         -- Ping
         local PingLabel = vgui.Create("DLabel", Row)
-        PingLabel:SetPos(800, 15)
-        PingLabel:SetText(ply:Ping() .. " ms")
+        PingLabel:SetPos(880, 15)
+        PingLabel:SetText(ply:Ping())
         PingLabel:SizeToContents()
     end
 end
 
--- 4. SCOREBOARD AÇMA / KAPAMA (HOOKS)
-
--- TAB tuşuna basınca (Aç)
 hook.Add("ScoreboardShow", "HLRPG_Scoreboard_Open", function()
-    -- Scoreboardu her seferinde yeniden yaratıyoruz ki veriler (yeni girenler) güncellensin
     CreateScoreboard()
-    
     if IsValid(BoardPanel) then
         BoardPanel:Show()
-        BoardPanel:MakePopup() -- Mouse kullanımını aç
-        BoardPanel:SetKeyboardInputEnabled(false) -- Yürümeye devam edebilmek için
+        BoardPanel:MakePopup()
+        BoardPanel:SetKeyboardInputEnabled(false)
     end
-    
-    return true -- Lambda'nın scoreboardunu engelle
+    return true 
 end)
 
--- TAB tuşunu bırakınca (Kapa)
 hook.Add("ScoreboardHide", "HLRPG_Scoreboard_Close", function()
-    if IsValid(BoardPanel) then
-        BoardPanel:Hide()
-    end
+    if IsValid(BoardPanel) then BoardPanel:Hide() end
 end)

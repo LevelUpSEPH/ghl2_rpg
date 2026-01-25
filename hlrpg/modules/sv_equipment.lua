@@ -1,159 +1,116 @@
 -- addons/halflife_rpg/lua/hlrpg/modules/sv_equipment.lua
-
 if not SERVER then return end
 
-util.AddNetworkString("HLRPG_OpenMenu")
 util.AddNetworkString("HLRPG_EquipItem")
 util.AddNetworkString("HLRPG_Sync_Suit")
 
 -- ==========================================
--- ELLERİ ZORLA DEĞİŞTİRME FONKSİYONU
--- (Hook'a güvenmiyoruz, kendimiz yapıyoruz)
+-- SLOT CONTROLLERS (MANTIK BURADA AYRILIYOR)
 -- ==========================================
-local function SetHandsDirectly(ply)
-    if not IsValid(ply) then return end
+
+local EquipmentControllers = {}
+
+-- 1. SUIT CONTROLLER (Model & Eller)
+EquipmentControllers["suit"] = function(ply, id, info)
+    ply:SetNWString("HLRPG_ActiveSuit", id)
     
-    -- 1. Zırh verisini al
-    local suitID = ply.HLRPG_Suit
-    if not suitID or suitID == "none" then return end
-
-    local suitData = nil
-    for _, s in ipairs(HLRPG.Config.Suits) do
-        if s.id == suitID then suitData = s; break end
+    if info.model then
+        ply:SetModel(info.model)
+        ply.HLRPG_Model = info.model
     end
 
-    if not suitData or not suitData.hands then return end
+    -- Görsel Senkronizasyon (Broadcasting)
+    net.Start("HLRPG_Sync_Suit")
+        net.WriteEntity(ply)
+        net.WriteString(info.model or "none")
+    net.Broadcast()
 
-    -- 2. SETUP HANDS ÇAĞIR (Sistemi hazırla)
-    ply:SetupHands()
-
-    -- 3. EL ENTITY'SİNİ BUL VE ZORLA DEĞİŞTİR
-    local hands = ply:GetHands()
-    if IsValid(hands) then
-        hands:SetModel(suitData.hands)
-        
-        if suitData.skin then
-            hands:SetSkin(suitData.skin)
+    -- Eller
+    timer.Simple(0.1, function()
+        if IsValid(ply) then
+            ply:SetupHands()
+            local hands = ply:GetHands()
+            if IsValid(hands) and info.hands then
+                hands:SetModel(info.hands)
+                if info.skin then hands:SetSkin(info.skin) end
+                hands:SetRenderMode(RENDERMODE_NORMAL)
+                hands:SetColor(Color(255, 255, 255, 255))
+            end
         end
-        
-        -- Görünürlük ayarları (Bazen görünmez doğuyorlar)
-        hands:SetRenderMode(RENDERMODE_NORMAL)
-        hands:SetColor(Color(255, 255, 255, 255))
-        
-        print("[HLRPG] Eller Zorla Degistirildi: " .. suitData.hands)
-    else
-        print("[HLRPG] HATA: Oyuncunun el entity'si bulunamadı!")
-    end
+    end)
+    
+    return "Zırh kuşandın: " .. info.name
+end
+
+-- 2. HAT CONTROLLER (Aksesuar)
+EquipmentControllers["hat"] = function(ply, id, info)
+    ply:SetNWString("HLRPG_ActiveHat", id)
+    -- Şimdilik sadece NWString setliyoruz, 
+    -- İleride buraya şapkayı BoneMerge ile oyuncuya takan fonksiyona çağrı gelecek.
+    return "Şapka kuşandın: " .. info.name
+end
+
+-- 3. PET CONTROLLER (Takipçi)
+EquipmentControllers["pet"] = function(ply, id, info)
+    ply:SetNWString("HLRPG_ActivePet", id)
+    -- İleride buraya pet spawn eden fonksiyon gelecek.
+    return "Pet yanına çağrıldı: " .. info.name
 end
 
 -- ==========================================
--- NETWORKING
+-- MERKEZİ NET RECEIVER
 -- ==========================================
-
-hook.Add("ShowHelp", "HLRPG_Override_F1", function(ply)
-    net.Start("HLRPG_OpenMenu")
-    net.Send(ply)
-    return false
-end)
 
 net.Receive("HLRPG_EquipItem", function(len, ply)
-    local type = net.ReadString()
-    local value = net.ReadString()
-    
-    if type == "model" then
-        ply:SetModel(value)
-        ply.HLRPG_Model = value
-        ply:SetupHands() 
-        ply:ChatPrint("Kıyafet değişti.")
+    local slotType = net.ReadString() -- "suit", "hat", "pet"
+    local id = net.ReadString()
+    local info = HLRPG_Assets[id]
 
-    elseif type == "suit" then
-        local suitData = nil
-        for _, s in ipairs(HLRPG.Config.Suits) do
-            if s.id == value then suitData = s; break end
-        end
-        
-        if suitData then
-            ply.HLRPG_Suit = value
-            ply:ChatPrint("Zırh Kuşandın: " .. suitData.name)
-            
-            -- Visuals (Dış)
-            net.Start("HLRPG_Sync_Suit")
-                net.WriteEntity(ply)
-                net.WriteString(suitData.model or "none")
-            net.Broadcast()
-            
-            -- Eller (İç) - Timer ile gecikmeli yapıyoruz ki model otursun
-            timer.Simple(0.1, function()
-                if IsValid(ply) then SetHandsDirectly(ply) end
-            end)
-        end
+    if not info then return end
+
+    -- 1. Sahiplik Kontrolü
+    if not ply:GetNWBool("HLRPG_Owned_" .. id, false) then 
+        ply:ChatPrint("[HUB] Bu eşyaya sahip değilsin!")
+        return 
+    end
+
+    -- 2. Controller'ı Çalıştır
+    local controller = EquipmentControllers[slotType]
+    if controller then
+        local message = controller(ply, id, info)
+        ply:ChatPrint("[HUB] " .. message)
+        ply:EmitSound("items/suitchargeok1.wav")
+    else
+        ply:ChatPrint("[DEBUG] Bu slot tipi için controller bulunamadı: " .. tostring(slotType))
     end
 end)
 
 -- ==========================================
--- HOOK: PLAYER SET HANDS (YEDEK PLAN)
+-- SPAWN & RESYNC HOOKS (SÜREKLİLİK)
 -- ==========================================
--- Bu yine de dursun, oyun motoru bazen bunu kendi çağırırsa doğru cevabı verelim.
+
+hook.Add("PlayerSpawn", "HLRPG_RestoreEquipment", function(ply)
+    timer.Simple(0.2, function()
+        if not IsValid(ply) then return end
+        
+        -- Aktif suit'i geri yükle (Diğer slotlar eklendikçe buraya da eklenecek)
+        local activeSuitID = ply:GetNWString("HLRPG_ActiveSuit", "")
+        local suitInfo = HLRPG_Assets[activeSuitID]
+        
+        if suitInfo then
+            EquipmentControllers["suit"](ply, activeSuitID, suitInfo)
+        end
+    end)
+end)
+
+-- Engine SetHands çağrısı için fallback
 hook.Add("PlayerSetHands", "HLRPG_Hook_SetHands", function(ply, ent)
-    if not ply.HLRPG_Suit or ply.HLRPG_Suit == "none" then return end
+    local activeSuitID = ply:GetNWString("HLRPG_ActiveSuit", "")
+    local info = HLRPG_Assets[activeSuitID]
 
-    local suitData = nil
-    for _, s in ipairs(HLRPG.Config.Suits) do
-        if s.id == ply.HLRPG_Suit then suitData = s; break end
-    end
-
-    if suitData and suitData.hands then
-        ent:SetModel(suitData.hands)
-        if suitData.skin then ent:SetSkin(suitData.skin) end
-        print("[HLRPG] Hook Tetiklendi!") -- Bunu konsolda görmüyorsan hook çalışmıyor demektir.
+    if info and info.hands then
+        ent:SetModel(info.hands)
+        if info.skin then ent:SetSkin(info.skin) end
         return true
     end
-end)
-
--- ==========================================
--- SPAWN & LOAD
--- ==========================================
-hook.Add("PlayerSpawn", "HLRPG_Spawn_Hands", function(ply)
-    timer.Simple(0.2, function() -- 0.2 saniye bekle
-        if not IsValid(ply) then return end
-        
-        -- Model
-        if ply.HLRPG_Model then ply:SetModel(ply.HLRPG_Model) end
-        
-        -- Zırh Visuals
-        if ply.HLRPG_Suit then
-            local sModel = "none"
-            for _, s in ipairs(HLRPG.Config.Suits) do
-                if s.id == ply.HLRPG_Suit then sModel = s.model; break end
-            end
-            net.Start("HLRPG_Sync_Suit")
-            net.WriteEntity(ply)
-            net.WriteString(sModel or "none")
-            net.Broadcast()
-            
-            -- ELLERİ ZORLA
-            SetHandsDirectly(ply)
-        end
-    end)
-end)
-
--- Yeni giren oyuncu senkronizasyonu
-hook.Add("PlayerInitialSpawn", "HLRPG_Sync_Init", function(ply)
-    timer.Simple(5, function()
-        if not IsValid(ply) then return end
-        for _, otherPly in ipairs(player.GetAll()) do
-            if otherPly.HLRPG_Suit then
-                local modelPath = "none"
-                for _, s in ipairs(HLRPG.Config.Suits) do
-                    if s.id == otherPly.HLRPG_Suit then modelPath = s.model; break end
-                end
-                if modelPath ~= "none" then
-                    net.Start("HLRPG_Sync_Suit")
-                    net.WriteEntity(otherPly)
-                    net.WriteString(modelPath)
-                    net.Send(ply)
-                end
-            end
-        end
-    end)
 end)

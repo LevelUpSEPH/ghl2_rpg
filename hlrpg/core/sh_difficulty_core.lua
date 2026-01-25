@@ -10,6 +10,19 @@ HLRPG_DifficultyScales = {
     [5] = { name = "Insane",    minLvl = 35, maxLvl = 50, mult = 3.5, xpMult = 5.0, color = Color(150, 0, 150) }
 }
 
+HLRPG_LevelConfig = {
+    [1]  = 100,
+    [2]  = 250,
+    [3]  = 500,
+    [4]  = 850,
+    [5]  = 1300,
+    [6]  = 2000,
+    [7]  = 3000,
+    [8]  = 4500,
+    [9]  = 6500,
+    [10] = 10000, -- 10'dan sonra her level için bir formül de ekleyebiliriz veya devam edebilirsin
+}
+
 function HLRPG_CalculateStat(baseValue, statType, npcLevel)
     local currentDiff = GetGlobalInt("HLRPG_CurrentDifficulty", 1)
     local diffData = HLRPG_DifficultyScales[currentDiff] or HLRPG_DifficultyScales[1]
@@ -27,4 +40,12 @@ function HLRPG_CalculateStat(baseValue, statType, npcLevel)
     end
     
     return baseValue * diffMult
+end
+
+function HLRPG_GetRequiredXP(lvl)
+    if HLRPG_LevelConfig[lvl] then
+        return HLRPG_LevelConfig[lvl]
+    end
+    -- Tabloda yoksa: Son kayıtlı level + (level başına 5000 artış)
+    return 10000 + ((lvl - 10) * 5000)
 end
