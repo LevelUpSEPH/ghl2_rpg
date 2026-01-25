@@ -54,13 +54,5 @@ HLRPG.Config.Suits = {
         model = "models/player/combine_super_soldier.mdl",
         hands = "models/weapons/c_arms_combine.mdl",
         head_offset = Vector(0, 0, 0)
-    },
-    {
-        id = "suit_zombine", 
-        name = "Zombine", 
-        model = "models/player/zombie_soldier.mdl",
-        hands = "models/weapons/c_arms_combine.mdl",
-        hide_suit_hands = true,
-        head_offset = Vector(0, 0, 0)
     }
 }

@@ -62,6 +62,9 @@ LoadFile("hlrpg/ui/cl_player_hub.lua")
 LoadFile("hlrpg/modules/sv_npc_damage.lua")
 LoadFile("hlrpg/modules/sv_player_cleanup.lua")
 LoadFile("hlrpg/modules/sv_temp_points.lua")
+LoadFile("hlrpg/modules/sv_shop_logic.lua")
+LoadFile("hlrpg/modules/sv_inventory_logic.lua")
+LoadFile("hlrpg/modules/sv_test_commands.lua")
 
 LoadFile("hlrpg/core/sh_central_assets.lua")
 

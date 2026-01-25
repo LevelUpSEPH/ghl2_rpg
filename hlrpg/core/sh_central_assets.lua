@@ -10,12 +10,12 @@ HLRPG_Assets = {
         price = 5000, 
         currency = "XP" 
     },
-    ["suit_heavy"] = { 
-        name = "HEV Suit", 
-        model = "models/player/hev.mdl",
-        hands = "models/weapons/c_arms_hev.mdl", -- ELLER BURAYA
+    ["suit_combineelite"] = { 
+        name = "Combine Elite", 
+        model = "models/player/combine_super_soldier.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
         group = "Suits", 
-        price = 10000, 
+        price = 7500, 
         currency = "XP" 
     },
     ["pet_headcrab"] = {
