@@ -146,9 +146,6 @@ function UpdatePlayerVisuals(ply, suitPath)
         Visuals[sid].Suit = suit
     end
 
-    -- ====================================================
-    -- 2. FAKE HEAD (SAHTE KAFA)
-    -- ====================================================
     local head = ClientsideModel(ply:GetModel())
     if IsValid(head) then
         head:SetPos(ply:GetPos())

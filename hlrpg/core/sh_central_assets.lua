@@ -25,12 +25,29 @@ HLRPG_Assets = {
         price = 2000,
         currency = "XP"
     },
-    ["hat_metrocop"] = {
-        name = "Metrocop Hat",
-        model = "models/props_combine/combine_hat.mdl",
-        group = "Hats",
-        price = 1500,
-        currency = "XP"
+    ["hat_metrocop"] = { 
+        name = "Metrocop Helmet", 
+        desc = "Şehir güvenliği vizörü. Wireframe görüşü sağlar.", 
+        model = "models/nova/w_headgear.mdl",
+        group = "Hats", 
+        type = "hat",
+        price = 10000, 
+        currency = "XP",
+        offset = Vector(0, 0, 0),
+        angle = Angle(90, 0, 270),
+        scale = 1.0,
+        vision = "wireframe" 
+    },
+    ["hat_melon"] = { 
+        name = "Melon Hat", 
+        desc = "Klasik bir karpuz şapka.", 
+        model = "models/props_junk/watermelon01.mdl", 
+        group = "Hats", 
+        type = "hat",
+        price = 1500, 
+        currency = "XP",
+        offset = Vector(0, 0, 5),
+        angle = Angle(0, 0, 0)
     },
     ["upg_fire_smg"] = { 
         name = "Incendiary SMG", 

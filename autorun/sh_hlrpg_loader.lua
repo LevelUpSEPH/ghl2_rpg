@@ -49,6 +49,8 @@ LoadFile("hlrpg/modules/cl_boss_hud.lua")
 LoadFile("hlrpg/modules/cl_npc_tags.lua")
 
 LoadFile("hlrpg/modules/cl_visuals.lua")
+LoadFile("hlrpg/modules/cl_hat_visuals.lua")
+
 LoadFile("hlrpg/modules/sv_skill_manager.lua")
 
 LoadFile("hlrpg/ui/cl_scoreboard.lua")
@@ -72,5 +74,6 @@ LoadFile("hlrpg/modules/sv_modifier_equipment.lua")
 LoadFile("hlrpg/modules/sv_test_commands.lua")
 
 LoadFile("hlrpg/core/sh_central_assets.lua")
+LoadFile("hlrpg/core/sh_hat_effects.lua")
 
 print(">>> [HALF LIFE RPG] Hazir! <<<\n")
