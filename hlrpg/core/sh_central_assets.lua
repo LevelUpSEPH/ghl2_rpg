@@ -49,6 +49,33 @@ HLRPG_Assets = {
         offset = Vector(0, 0, 5),
         angle = Angle(0, 0, 0)
     },
+    ["hat_helibomb"] = { 
+        name = "Helicopter Bomb Hat", 
+        desc = "Kafa üstü helikopter bombası.", 
+        model = "models/Combine_Helicopter/helicopter_bomb01.mdl", 
+        group = "Hats", 
+        type = "hat",
+        price = 2500, 
+        currency = "XP",
+        offset = Vector(4.8, 1.35, 0.065),
+        angle = Angle(0, 0, 90),
+        scale = 0.5
+    },
+    ["hat_headcrab"] = { 
+        name = "Headcrab Hat", 
+        desc = "Get a second chance at life", 
+        model = "models/nova/w_headcrab.mdl", 
+        group = "Hats", 
+        type = "hat",
+        price = 3000, 
+        currency = "XP",
+        offset = Vector(0, 0, 0),
+        angle = Angle(90, 0, -90),
+        scale = 0.9,
+        OnDeathPrevention = function(ply)
+            HLRPG_StartZombiePilot(ply)
+        end
+    },
     ["upg_fire_smg"] = { 
         name = "Incendiary SMG", 
         desc = "SMG mermileri hedefini yakar.", 

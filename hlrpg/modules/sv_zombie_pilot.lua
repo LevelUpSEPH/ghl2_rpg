@@ -80,6 +80,61 @@ hook.Add("Think", "HLRPG_ZombiePilot_Logic", function()
                     end
                 end)
             end
+
+            if ply:KeyPressed(IN_JUMP) and ply.CanBurstRevive then
+                local pos = npc:GetPos()
+                local ang = npc:GetAngles()
+
+                -- 1. BAĞLANTIYI KES (Ölmemek için kritik)
+                npc.IsPilotEntity = false
+                npc.OwnerPly = nil
+                ply.IsZombieForm = false
+                ply.CanBurstRevive = false
+                ply:SetNWBool("HLRPG_InZombieForm", false)
+
+                -- 2. PARÇALARI SPAWN ET (Ragdoll & Headcrab)
+                local gibs = {
+                    "models/zombie/classic_torso.mdl",
+                    "models/zombie/classic_legs.mdl"
+                }
+
+                for _, model in ipairs(gibs) do
+                    local gib = ents.Create("prop_ragdoll")
+                    gib:SetModel(model)
+                    gib:SetPos(pos + Vector(0,0,30))
+                    gib:SetAngles(ang)
+                    gib:Spawn()
+                    gib:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+                    
+                    -- Parçaları rastgele bir kuvvetle fırlat
+                    local phys = gib:GetPhysicsObject()
+                    if IsValid(phys) then
+                        phys:ApplyForceCenter(VectorRand() * 500 + Vector(0,0,300))
+                    end
+                    
+                    -- 10 saniye sonra temizle
+                    SafeRemoveEntityDelayed(gib, 10)
+                end
+
+                -- 4. ZOMBİYİ SİL VE OYUNCUYU GETİR
+                npc:Remove()
+                
+                ply:SetNoDraw(false)
+                ply:SetNotSolid(false)
+                ply:SetMoveType(MOVETYPE_WALK)
+                ply:SetPos(pos)
+                ply:SetSaveValue("m_takedamage", 2)
+                ply:SetHealth(100)
+
+                -- Ses ve Kan Efekti
+                ply:EmitSound("physics/flesh/flesh_bloody_break.wav", 100, 80)
+                local ed = EffectData()
+                ed:SetOrigin(pos + Vector(0,0,40))
+                util.Effect("AntlionGib", ed)
+                
+                ply:ViewPunch(Angle(-15, 0, 0))
+                ply:ChatPrint("[BURST] Zombi parçalandı, ruhun serbest!")
+            end
             
             ply:SetPos(npc:GetPos() + Vector(0,0,60))
         end
@@ -90,13 +145,37 @@ hook.Add("EntityTakeDamage", "HLRPG_PreventDeath_ToZombie", function(target, dmg
     if target:IsPlayer() and not target.IsZombieForm then
         local currentHealth = target:Health()
         local incomingDamage = dmginfo:GetDamage()
-
+        
         if (currentHealth - incomingDamage) <= 0 then
-            dmginfo:SetDamage(0)
-            target:SetHealth(1) 
-            HLRPG_StartZombiePilot(target)
-            target:SetSaveValue("m_takedamage", 0) 
-            return true 
+            local hatID = target:GetNWString("HLRPG_ActiveHat", "")
+            local asset = HLRPG_Assets[hatID]
+
+            if asset and asset.OnDeathPrevention and not target.UsedZombieLife then
+                local currentHealth = target:Health()
+                if (currentHealth - dmginfo:GetDamage()) <= 0 then
+                    
+                    dmginfo:SetDamage(0)
+                    target:SetHealth(1)
+                    target.UsedZombieLife = true
+                    
+                    local success, err = pcall(function()
+                        asset.OnDeathPrevention(target)
+                    end)
+
+                    if not success then
+                        print("[HLRPG ERROR] OnDeathPrevention Hatası: ", err)
+                        -- Eğer zombi başlatılamadıysa oyuncuyu ölümsüz bırakma, öldür ki bugda kalmasın
+                        target:Kill() 
+                        return
+                    end
+                    if success then
+                        print("[HLRPG] OnDeathPrevention başarıyla çalıştırıldı.")
+                    end
+                    
+                    target:SetSaveValue("m_takedamage", 0)
+                    return true
+                end
+            end
         end
     end
 end)
@@ -115,27 +194,12 @@ hook.Add("PostEntityTakeDamage", "HLRPG_ZombieDeath_Sync", function(ent, dmg, to
     end
 end)
 
-hook.Add("OnNPCKilled", "HLRPG_ZombieRevive", function(victim, attacker, inflictor)
+hook.Add("OnNPCKilled", "HLRPG_ZombieRevive_Grant", function(victim, attacker, inflictor)
     if IsValid(attacker) and attacker.IsPilotEntity and IsValid(attacker.OwnerPly) then
         local ply = attacker.OwnerPly
-        local pos = attacker:GetPos()
         
-        attacker:Remove()
-        
-        ply.IsZombieForm = false
-        ply:SetNWBool("HLRPG_InZombieForm", false)
-        ply:SetNoDraw(false)
-        ply:SetNotSolid(false)
-        ply:SetMoveType(MOVETYPE_WALK)
-        ply:SetPos(pos)
-        
-        ply:SetSaveValue("m_takedamage", 2)
-        ply:SetHealth(75) 
-        
-        local ed = EffectData()
-        ed:SetOrigin(pos + Vector(0,0,40))
-        util.Effect("cball_explode", ed)
-        ply:EmitSound("ambient/levels/citadel/citadel_cannon_blast1.wav", 100, 150)
+        ply.CanBurstRevive = true
+        ply:ChatPrint("[SOUL REAPED] Patlamak için [SPACE] tuşuna bas!")
     end
 end)
 
@@ -157,5 +221,16 @@ hook.Add("PlayerBindPress", "HLRPG_Zombie_NoWeaponChange", function(ply, bind, p
         if string.find(bind, "slot") or string.find(bind, "invprev") or string.find(bind, "invnext") or string.find(bind, "lastinv") then
             return true -- Bind'ı tamamen iptal et
         end
+    end
+end)
+
+hook.Add("PlayerSpawn", "HLRPG_ZombiePilot_ResetOnSpawn", function(ply)
+    ply.UsedZombieLife = false
+    ply.CanBurstRevive = false
+end)
+
+hook.Add("PrePlayerDraw", "HLRPG_HideZombiePilot", function(ply)
+    if ply:GetNWBool("HLRPG_InZombieForm") then
+        return true
     end
 end)
