@@ -27,6 +27,8 @@ function HLRPG_StartZombiePilot(ply)
     ply:SetNWBool("HLRPG_InZombieForm", true)
     ply:SetNWEntity("HLRPG_PilotedZombie", zombie)
 
+    ply:ChatPrint("[SECOND WIND] You are zombified thanks to your headcrab! Get a kill and press JUMP to revive or DUCK to give up!")
+
     zombie:EmitSound("npc/zombie/zombie_alert1.wav", 100, 80)
 end
 
@@ -135,7 +137,12 @@ hook.Add("Think", "HLRPG_ZombiePilot_Logic", function()
                 ply:ViewPunch(Angle(-15, 0, 0))
                 ply:ChatPrint("[BURST] Zombi parçalandı, ruhun serbest!")
             end
-            
+            if ply:KeyPressed(IN_DUCK) then
+                local d = DamageInfo()
+                d:SetDamage(1000) -- Çok yüksek hasar
+                d:SetDamageType(DMG_BLAST) -- Patlama hasarı parçalanmayı (gib) tetikler
+                npc:TakeDamageInfo(d)
+            end
             ply:SetPos(npc:GetPos() + Vector(0,0,60))
         end
     end
@@ -227,6 +234,9 @@ end)
 hook.Add("PlayerSpawn", "HLRPG_ZombiePilot_ResetOnSpawn", function(ply)
     ply.UsedZombieLife = false
     ply.CanBurstRevive = false
+    ply.IsZombieForm = false
+
+    ply:SetNWBool("HLRPG_InZombieForm", false)
 end)
 
 hook.Add("PrePlayerDraw", "HLRPG_HideZombiePilot", function(ply)
