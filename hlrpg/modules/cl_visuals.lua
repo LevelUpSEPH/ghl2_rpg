@@ -208,6 +208,18 @@ hook.Add("Think", "HLRPG_Global_Visual_Enforce", function()
         end
         if ply:IsDormant() then continue end
 
+        local inZombie = ply:GetNWBool("HLRPG_InZombieForm", false)
+        
+        if IsValid(data.Suit) then data.Suit:SetNoDraw(inZombie) end
+        if IsValid(data.FakeHead) then data.FakeHead:SetNoDraw(inZombie) end
+
+        if inZombie then 
+            if ply:GetMaterial() ~= "models/effects/vol_light001" then 
+                ply:SetMaterial("models/effects/vol_light001") 
+            end
+            continue 
+        end
+
         if ply:GetMaterial() ~= INVISIBLE_MAT then ply:SetMaterial(INVISIBLE_MAT) end
         
         local wep = ply:GetActiveWeapon()
