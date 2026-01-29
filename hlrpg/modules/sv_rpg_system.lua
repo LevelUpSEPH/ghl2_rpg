@@ -70,22 +70,36 @@ hook.Add("EntityTakeDamage", "HLRPG_TrackDamage", function(target, dmginfo)
     end
 end)
 
+hook.Add("EntityTakeDamage", "HLRPG_TrackVehicleDamage", function(target, dmginfo)
+    if target:IsNPC() then
+        local attacker = dmginfo:GetAttacker()
+        local inflictor = dmginfo:GetInflictor()
+        local ply = nil
+
+        if IsValid(attacker) and attacker:IsVehicle() then
+            ply = attacker:GetDriver()
+        elseif IsValid(inflictor) and inflictor:IsVehicle() then
+            ply = inflictor:GetDriver()
+        end
+
+        if IsValid(ply) and ply:IsPlayer() then
+            target.HLRPG_DamageTable = target.HLRPG_DamageTable or {}
+            target.HLRPG_DamageTable[ply] = (target.HLRPG_DamageTable[ply] or 0) + dmginfo:GetDamage()
+        end
+    end
+end)
+
 hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
     if not npc.HLRPG_DamageTable or table.Count(npc.HLRPG_DamageTable) == 0 then return end
 
-    -- NPC doğduğunda üzerine mühürlediğimiz sabit XP'yi al
     local totalXPAward = npc.HLRPG_AwardXP or 10
-    
-    -- Sözlükten ismini alalım (Sözlük yoksa class ismini temizle)
     local npcDisplayName = (HLRPG_GetNPCName and HLRPG_GetNPCName(npc)) or npc:GetClass():gsub("npc_", ""):upper()
 
-    -- 1. TOPLAM HASARI HESAPLA
     local totalDamage = 0
     for ply, dmg in pairs(npc.HLRPG_DamageTable) do
         if IsValid(ply) then totalDamage = totalDamage + dmg end
     end
 
-    -- 2. DAĞITIM VE BİLDİRİM
     for ply, dmg in pairs(npc.HLRPG_DamageTable) do
         if IsValid(ply) and ply:IsPlayer() then
             local ratio = dmg / totalDamage
@@ -93,18 +107,16 @@ hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
             local percentage = math.Round(ratio * 100)
 
             if xpGain > 0 then
-                -- Stat Güncelleme
+                if ply.IsZombieForm then
+                    ply.CanBurstRevive = true
+                end
+
                 ply.HLRPG_XP = (ply.HLRPG_XP or 0) + xpGain
                 ply:SetNWInt("HLRPG_XP", ply.HLRPG_XP)
 
-                if HLRPG_AddTempPoints then
-                    HLRPG_AddTempPoints(ply, xpGain)
-                end
-                
-                -- Level Kontrolü
+                if HLRPG_AddTempPoints then HLRPG_AddTempPoints(ply, xpGain) end
                 PerformLevelUp(ply)
                 
-                -- Ulti Şarjı
                 if ply.AddUltCharge then
                     ply:AddUltCharge(math.Clamp(xpGain * 0.2, 2, 50))
                 end
@@ -113,7 +125,6 @@ hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
                 net.WriteInt(xpGain, 32)
                 net.WriteInt(percentage, 16)
                 net.WriteString(npcDisplayName)
-                -- NPC rengini de gönderelim (sözlükten çekiyoruz)
                 local npcCol = (HLRPG_GetNPCColor and HLRPG_GetNPCColor(npc)) or Color(255, 255, 255)
                 net.WriteColor(npcCol)
                 net.Send(ply)
@@ -122,16 +133,9 @@ hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
     end
 end)
 
--- Lambda entegrasyonu kısmını olduğu gibi bırakabilirsin, o gayet güzel çalışıyor.
-
--- ==========================================
--- 3. LAMBDA ENTEGRASYONU (DATA PERSISTENCE)
--- ==========================================
-
 if engine.ActiveGamemode() == "lambda" then
     print("[HLRPG] Lambda Modu Tespit Edildi. Entegrasyon Aktif.")
 
-    -- HARİTA DEĞİŞİRKEN (SAVE)
     hook.Add("LambdaOnPlayerSave", "HLRPG_SaveData", function(ply, data)
         data.HLRPG_Data = {
             xp = ply.HLRPG_XP,
@@ -140,7 +144,6 @@ if engine.ActiveGamemode() == "lambda" then
         }
     end)
 
-    -- YENİ HARİTADA (LOAD)
     hook.Add("LambdaOnPlayerLoaded", "HLRPG_LoadData", function(ply, data)
         if data.HLRPG_Data then
             local saved = data.HLRPG_Data
@@ -149,7 +152,6 @@ if engine.ActiveGamemode() == "lambda" then
             ply.HLRPG_XP = saved.xp or 0
             ply.HLRPG_Hat = saved.hat or "Yok"
             
-            -- Network Sync yapmayı unutma!
             ply:SetNWInt("HLRPG_Level", ply.HLRPG_Level)
             ply:SetNWInt("HLRPG_XP", ply.HLRPG_XP)
             ply:SetNWString("HLRPG_Hat", ply.HLRPG_Hat)

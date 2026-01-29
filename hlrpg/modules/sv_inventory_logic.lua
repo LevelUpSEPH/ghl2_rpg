@@ -61,3 +61,31 @@ function HLRPG_Inventory_EquipRequest(ply, itemID)
         end
     end
 end
+
+function HLRPG_SyncEntireServerToPlayer(newPlayer)
+    for _, ply in ipairs(player.GetAll()) do
+        if IsValid(ply) and ply ~= newPlayer then
+            if ply.HLRPG_ActiveHat and ply.HLRPG_ActiveHat ~= "none" then
+                net.Start("HLRPG_Sync_Hat")
+                    net.WriteEntity(ply)
+                    net.WriteString(ply.HLRPG_ActiveHat)
+                net.Send(newPlayer)
+            end
+
+            if ply.HLRPG_Suit and ply.HLRPG_Suit ~= "none" then
+                net.Start("HLRPG_Sync_Suit")
+                    net.WriteEntity(ply)
+                    net.WriteString(ply.HLRPG_Suit)
+                net.Send(newPlayer)
+            end
+        end
+    end
+end
+
+hook.Add("PlayerInitialSpawn", "HLRPG_Sync_LateJoiners", function(ply)
+    timer.Simple(2, function()
+        if IsValid(ply) then
+            HLRPG_SyncEntireServerToPlayer(ply)
+        end
+    end)
+end)

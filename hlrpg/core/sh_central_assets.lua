@@ -25,6 +25,20 @@ HLRPG_Assets = {
         price = 2000,
         currency = "XP"
     },
+    ["pet_antlion"] = {
+        name = "Antlion Pet",
+        model = "models/antlion.mdl",
+        group = "Pets",
+        price = 4000,
+        currency = "XP"
+    },
+    ["pet_rollermine"] = {
+        name = "Rollermine Pet",
+        model = "models/roller.mdl",
+        group = "Pets",
+        price = 3500,
+        currency = "XP"
+    },
     ["hat_metrocop"] = { 
         name = "Metrocop Helmet", 
         desc = "Şehir güvenliği vizörü. Wireframe görüşü sağlar.", 

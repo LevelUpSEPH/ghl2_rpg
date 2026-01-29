@@ -35,7 +35,7 @@ end
 -- addons/halflife_rpg/lua/hlrpg/modules/sv_npc_difficulty.lua
 
 function ScaleNPC(npc)
-    if not IsValid(npc) or npc:IsPlayer() then return end
+    if not IsValid(npc) or npc:IsPlayer() or npc:GetNWBool("HLRPG_ISPET", true) then return end
     
     -- Sadece canı ful olanlar güncellenir (Senin istediğin kural)
     if npc:Health() < npc:GetMaxHealth() then return end

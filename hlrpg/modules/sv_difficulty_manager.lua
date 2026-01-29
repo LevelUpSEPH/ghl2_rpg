@@ -9,15 +9,11 @@ function HLRPG_SetDifficulty(level)
     
     local diffData = HLRPG_DifficultyScales[level]
 
-    -- Mevcut NPC'leri tara
     for _, ent in ipairs(ents.GetAll()) do
         if IsValid(ent) and ent:IsNPC() then
             
-            -- KRİTİK KONTROL: Sadece canı ful olanları güncelle
-            -- (Hali hazırda çatışmada olan NPC'ler eski statlarında kalır)
             if ent:Health() == ent:GetMaxHealth() then
                 
-                -- Seviyeyi yeni zorluk bandına göre tazele
                 local randomLvl = math.random(diffData.minLvl, diffData.maxLvl)
                 ent:SetNWInt("HLRPG_NPCLevel", randomLvl)
 
@@ -28,7 +24,6 @@ function HLRPG_SetDifficulty(level)
         end
     end
 
-    -- Bildirim
     for _, ply in ipairs(player.GetAll()) do
         ply:PrintMessage(HUD_PRINTCENTER, "DÜNYA SEVİYESİ: " .. diffData.name:upper())
     end

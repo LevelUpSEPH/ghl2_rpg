@@ -74,9 +74,14 @@ LoadFile("hlrpg/modules/sv_modifier_equipment.lua")
 LoadFile("hlrpg/modules/sv_zombie_pilot.lua")
 LoadFile("hlrpg/modules/cl_zombie_pilot.lua")
 
+LoadFile("hlrpg/ui/cl_pet_hud.lua")
+LoadFile("hlrpg/modules/sv_pet_core.lua")
+LoadFile("hlrpg/modules/sv_pet_ai.lua")
+
 LoadFile("hlrpg/modules/sv_test_commands.lua")
 
 LoadFile("hlrpg/core/sh_central_assets.lua")
 LoadFile("hlrpg/core/sh_hat_effects.lua")
+LoadFile("hlrpg/core/sh_pets.lua")
 
 print(">>> [HALF LIFE RPG] Hazir! <<<\n")
