@@ -6,24 +6,20 @@ local function GetEvoData(petID, stage)
 end
 
 function HLRPG_GetPetStats(ply, petID)
-    local pData = HLRPG.PetData[petID]
-    if not pData then return nil end
-
-    local stage = ply:GetNWInt("PetStage_" .. petID, 0)
     local level = ply:GetNWInt("PetLevel_" .. petID, 1)
+    local stage = HLRPG_GetPetEvolutionStage(petID, level)
+    local evo = HLRPG.PetData[petID].Evolutions[stage]
     
-    local evo = pData.Evolutions[stage]
     if not evo then return nil end
 
     return {
         class = evo.class,
         name = evo.name,
-        maxHealth = evo.baseHealth + ((level - 1) * evo.healthPerLevel),
-        dmgMultiplier = evo.dmgMultiplier, 
+        maxHealth = evo.baseHealth + ((level - stage) * evo.healthPerLevel),
+        dmgMultiplier = evo.dmgMultiplier,
         level = level,
         stage = stage,
-        threshold = evo.evolutionThreshold,
-        reqXP = HLRPG_GetPlayerPetRequiredXP(ply, petID) 
+        reqXP = HLRPG_GetPlayerPetRequiredXP(ply, petID)
     }
 end
 
@@ -36,9 +32,20 @@ function HLRPG_SummonPet(ply, petID)
     if IsValid(ply.CurrentRPGPet) then 
         ply.CurrentRPGPet:Remove() 
     end
-
+    local pData = HLRPG.PetData[petID]
+    local evo = pData.Evolutions[stats.stage]
     local pet = ents.Create(stats.class)
     if not IsValid(pet) then return end
+
+    if evo.modelScale then
+        pet:SetModelScale(evo.modelScale, 0)
+    end
+
+    if evo.weapon then
+        print("Equipping pet with weapon: " .. evo.weapon)
+        pet:SetKeyValue("additionalequipment", evo.weapon)
+        pet:SetKeyValue("NumGrenades", "5") 
+    end
 
     local spawnPos = ply:GetPos() + ply:GetForward() * 50 + Vector(0, 0, 20)
     pet:SetPos(spawnPos)
@@ -49,16 +56,25 @@ function HLRPG_SummonPet(ply, petID)
     pet.PetID = petID
     pet.CurrentStats = stats
 
+    pet:SetNWInt("HLRPG_PetEntityLevel", stats.level)
+
+    pet:SetKeyValue("squadname", "")
+    pet:SetKeyValue("spawnflags", "256")
+    
     pet:Spawn()
     pet:Activate()
 
+    if evo.weapon and pet:IsNPC() then
+        pet:CapabilitiesAdd(CAP_WEAPON_RANGE_ATTACK1)
+    end
+
     pet:SetMaxHealth(stats.maxHealth)
     pet:SetHealth(stats.maxHealth)
-    
-    pet:SetKeyValue("squadname", "")
 
     ply.CurrentRPGPet = pet
     ply:SetNWEntity("HLRPG_ActivePetEntity", pet)
+
+    pet:SetNWBool("HLRPG_ISPET", true)
 
     if HLRPG_SetupPetRelationships then
         HLRPG_SetupPetRelationships(pet, ply)
@@ -103,54 +119,53 @@ hook.Add("EntityTakeDamage", "HLRPG_Pet_Damage_Master", function(target, dmginfo
     end
 end)
 
-hook.Add("OnNPCKilled", "HLRPG_Pet_Global_Logic", function(victim, attacker, inflictor)
-    if victim.IsHLRPGPet and IsValid(victim.OwnerPly) then
-        victim.OwnerPly:SetNWString("HLRPG_ActivePet", "none")
-        victim.OwnerPly:SetNWEntity("HLRPG_ActivePetEntity", nil)
-        victim.OwnerPly:ChatPrint("💔 Petin öldü!")
-        return
-    end
-
+hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflictor)
     if IsValid(attacker) and attacker.IsHLRPGPet then
         local ply = attacker.OwnerPly
         local petID = attacker.PetID
-        if not IsValid(ply) then return end
+        
+        local currentLevel = ply:GetNWInt("PetLevel_" .. petID, 1)
+        local currentXP = ply:GetNWInt("PetXP_" .. petID, 0) + 1
+        
+        -- Mevcut evrim verisini al
+        local stage = HLRPG_GetPetEvolutionStage(petID, currentLevel)
+        local evo = HLRPG.PetData[petID].Evolutions[stage]
+        
+        -- Level atlama kontrolü
+        local reqXP = evo.xpRequired + ((currentLevel - stage) * evo.xpIncreasePerLevel)
 
-        local stats = HLRPG_GetPetStats(ply, petID)
-        if not stats then return end
-
-        local curXP = ply:GetNWInt("PetXP_" .. petID, 0) + 1
-        local reqXP = stats.reqXP
-
-        if curXP >= reqXP then
-            curXP = 0
-            local newLevel = stats.level + 1
-            local totalLevel = stats.stage + (newLevel - 1)
-
-            if stats.threshold and totalLevel > stats.threshold then
-                local nextStage = stats.threshold
-                if GetEvoData(petID, nextStage) then
-                    ply:SetNWInt("PetStage_" .. petID, nextStage)
-                    ply:SetNWInt("PetLevel_" .. petID, 1)
-                    ply:SetNWInt("PetXP_" .. petID, 0)
-                    
-                    ply:ChatPrint("✨ PETİN EVRİM GEÇİRDİ: " .. GetEvoData(petID, nextStage).name)
-                    HLRPG_SummonPet(ply, petID)
-                    return 
-                end
-            end
-
+        print("Pet XP: " .. currentXP .. " / " .. reqXP)
+        
+        if currentXP >= reqXP then
+            currentXP = 0
+            local newLevel = currentLevel + 1
             ply:SetNWInt("PetLevel_" .. petID, newLevel)
             ply:SetNWInt("PetXP_" .. petID, 0)
 
-            local updatedStats = HLRPG_GetPetStats(ply, petID)
-            attacker:SetMaxHealth(updatedStats.maxHealth)
-            attacker:SetHealth(updatedStats.maxHealth)
-            attacker.CurrentStats = updatedStats
-            
-            ply:ChatPrint("🎉 Pet Seviye Atladı: " .. newLevel .. " (Toplam: " .. totalLevel .. ")")
+            -- EVRİM KONTROLÜ
+            local nextStage = HLRPG_GetPetEvolutionStage(petID, newLevel)
+            if nextStage != stage then
+                ply:ChatPrint("✨ PETİN EVRİMLEŞTİ: " .. HLRPG.PetData[petID].Evolutions[nextStage].name)
+                HLRPG_SummonPet(ply, petID)
+                return 
+            else
+                local newStats = HLRPG_GetPetStats(ply, petID)
+                if newStats then
+                    attacker:SetMaxHealth(newStats.maxHealth)
+                    attacker:SetHealth(newStats.maxHealth)
+                    attacker.CurrentStats = newStats
+                    
+                    attacker:SetNWInt("HLRPG_PetEntityLevel", newLevel)
+                    attacker:SetNWString("HLRPG_PetEntityName", newStats.name)
+                end
+                
+                ply:ChatPrint("🎉 Pet Seviye Atladı: " .. newLevel)
+                
+                -- LEVEL UP EFEKTİ (Daha sonra ekleyeceğimiz efekt için hazır)
+                HLRPG_PlayLevelUpEffect(attacker) 
+            end
         else
-            ply:SetNWInt("PetXP_" .. petID, curXP)
+            ply:SetNWInt("PetXP_" .. petID, currentXP)
         end
     end
 end)

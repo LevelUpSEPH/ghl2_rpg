@@ -13,7 +13,7 @@ hook.Add("HUDPaint", "HLRPG_MultiBossHUD", function()
     
     -- 1. YAKINDAKİ BOSS'LARI TESPİT ET
     for _, ent in ipairs(ents.FindInSphere(ply:GetPos(), 3000)) do
-        if IsValid(ent) and ent:IsNPC() and ent:GetNWBool("HLRPG_IsBoss") and ent:Health() > 0 then
+        if IsValid(ent) and ent:IsNPC() and not ent:GetNWBool("HLRPG_ISPET", false) and ent:GetNWBool("HLRPG_IsBoss") and ent:Health() > 0 then
             activeBosses[ent:EntIndex()] = ent
         end
     end
