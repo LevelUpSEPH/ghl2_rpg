@@ -1,6 +1,8 @@
 -- addons/halflife_rpg/lua/hlrpg/modules/sv_inventory_logic.lua
 if not SERVER then return end
 
+util.AddNetworkString("HLRPG_HubAction")
+
 function HLRPG_Inventory_EquipRequest(ply, itemID)
     local itemData = HLRPG_Assets[itemID]
     if not itemData then return end
@@ -88,4 +90,14 @@ hook.Add("PlayerInitialSpawn", "HLRPG_Sync_LateJoiners", function(ply)
             HLRPG_SyncEntireServerToPlayer(ply)
         end
     end)
+end)
+
+net.Receive("HLRPG_HubAction", function(len, ply)
+    local action = net.ReadString() -- "equip"
+    local id = net.ReadString()
+    
+    if action == "equip" then
+        -- Senin yukarıda paylaştığın fonksiyonu tetikler
+        HLRPG_Inventory_EquipRequest(ply, id)
+    end
 end)

@@ -11,6 +11,7 @@ function OpenPlayerHub()
     frame:MakePopup()
     
     frame.Paint = function(s, w, h)
+        -- Ana Arka Plan
         draw.RoundedBox(0, 0, 0, w, h, Color(25, 25, 25, 255)) 
         draw.RoundedBox(0, 0, 0, w, 50, Color(40, 40, 40, 255))
         
@@ -20,6 +21,7 @@ function OpenPlayerHub()
         draw.SimpleText("XP: " .. xp .. " | TP: " .. tp, "DermaDefaultBold", w - 20, 18, Color(200, 200, 200), TEXT_ALIGN_RIGHT)
     end
 
+    -- Tab Buton Konteynırı
     local tabContainer = vgui.Create("DPanel", frame)
     tabContainer:SetSize(400, 40)
     tabContainer:SetPos(frame:GetWide()/2 - 200, 10)
@@ -50,7 +52,7 @@ function OpenPlayerHub()
     mainBody:DockMargin(10, 50, 10, 10)
     mainBody.Paint = nil
 
-    local function CreateCategoryBox(parent, title, x, y, w, h, groupName, typeKey)
+    function CreateCategoryBox(parent, title, x, y, w, h, groupName, typeKey)
         local container = vgui.Create("DPanel", parent)
         container:SetSize(w, h)
         container:SetPos(x, y)
@@ -61,18 +63,19 @@ function OpenPlayerHub()
             surface.DrawLine(0, 25, w, 25)
         end
 
-        -- === HOVER DETAY PANELI (Alt Kısımda) ===
+        -- === DETAY PANELI (Hover Bilgisi) ===
         local detailPanel = vgui.Create("DPanel", container)
         detailPanel:Dock(BOTTOM)
-        detailPanel:SetTall(35)
+        detailPanel:SetTall(40)
         detailPanel.Paint = function(s, w, h)
-            draw.RoundedBox(0, 0, 0, w, 1, Color(100, 100, 100, 50)) -- Üst çizgi
+            draw.RoundedBox(0, 0, 0, w, 1, Color(100, 100, 100, 50))
             if s.ItemName then
                 local priceTxt = s.ItemPrice and (" | Fiyat: " .. s.ItemPrice .. " " .. s.ItemCurrency) or ""
-                draw.SimpleText(s.ItemName .. priceTxt, "DermaDefaultBold", 10, 3, Color(255, 180, 0))
-                draw.SimpleText(s.ItemDesc or "", "DermaDefault", 10, 18, Color(200, 200, 200))
+                local lvlTxt = s.ItemLvl and (" | SEVİYE: " .. s.ItemLvl) or ""
+                draw.SimpleText(s.ItemName .. priceTxt .. lvlTxt, "DermaDefaultBold", 10, 3, Color(255, 180, 0))
+                draw.SimpleText(s.ItemDesc or "", "DermaDefault", 10, 20, Color(200, 200, 200))
             else
-                draw.SimpleText("Bilgi için ikonun üzerine gel...", "DermaDefault", 10, h/2 - 7, Color(100, 100, 100))
+                draw.SimpleText("Bilgi için üzerine gel...", "DermaDefault", 10, h/2 - 7, Color(100, 100, 100))
             end
         end
 
@@ -89,34 +92,74 @@ function OpenPlayerHub()
             if info.group != groupName then continue end
             
             local isOwned = LocalPlayer():GetNWBool("HLRPG_Owned_" .. id, false)
+            
+            -- Filtreleme
             if activeTab == "Shop" and isOwned and groupName != "Temporary Upgrades" then continue end
             if activeTab == "Inventory" and not isOwned then continue end
 
-            local isEquipped = LocalPlayer():GetNWString("HLRPG_ActiveSuit", "") == id
+            -- Kuşanılma Durumu (Suit veya Pet için)
+            local isEquipped = false
+            if groupName == "Suits" then
+                isEquipped = LocalPlayer():GetNWString("HLRPG_ActiveSuit", "") == id
+            elseif groupName == "Pets" then
+                isEquipped = LocalPlayer():GetNWString("HLRPG_ActivePet", "none") == id
+            end
 
             local icon = grid:Add("SpawnIcon")
             if info.model then icon:SetModel(info.model) end
             icon:SetSize(64, 64)
-            
-            -- Tooltip'i kapatıyoruz çünkü kendi hover panelimizi yaptık
             icon:SetTooltip(nil)
 
-            -- === HOVER MANTIĞI ===
+            -- === HOVER ETKİLEŞİMİ ===
             icon.OnCursorEntered = function()
                 detailPanel.ItemName = info.name
                 detailPanel.ItemDesc = info.desc
                 if activeTab == "Shop" then
                     detailPanel.ItemPrice = info.price
                     detailPanel.ItemCurrency = info.currency
+                    detailPanel.ItemLvl = nil
                 else
-                    detailPanel.ItemPrice = nil -- Inventory'de fiyat gösterme
+                    detailPanel.ItemPrice = nil
+                    -- Eğer pet ise seviyesini göster
+                    if groupName == "Pets" then
+                        local stage = LocalPlayer():GetNWInt("PetStage_" .. id, 0)
+                        local level = LocalPlayer():GetNWInt("PetLevel_" .. id, 1)
+                        detailPanel.ItemLvl = stage + level
+                    else
+                        detailPanel.ItemLvl = nil
+                    end
                 end
             end
             icon.OnCursorExited = function()
                 detailPanel.ItemName = nil
             end
 
-            -- Seçili Çerçevesi (Equipped)
+            icon.PaintOver = function(s, w, h)
+                -- Sadece Inventory sekmesindeysek ve item kuşanılmışsa göster
+                if activeTab == "Inventory" and isEquipped then
+                    -- Dış çerçeve (Parlak Yeşil)
+                    surface.SetDrawColor(0, 255, 0, 255)
+                    surface.DrawOutlinedRect(0, 0, w, h, 2) -- 2 piksellik kalınlık
+                    
+                    -- İçten hafif bir parlama efekti (Opsiyonel)
+                    surface.SetDrawColor(0, 255, 0, 30)
+                    surface.DrawRect(2, 2, w-4, h-4)
+
+                    -- Sağ üst köşeye bir onay işareti (Checkmark)
+                    draw.SimpleText("●", "DermaDefaultBold", w - 10, 8, Color(0, 255, 0), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                end
+
+                -- Market (Shop) sekmesindeysek ve para yetmiyorsa kırmızı karartma
+                if activeTab == "Shop" then
+                    local myMoney = (info.currency == "TP") and LocalPlayer():GetNWInt("HLRPG_TempPoints") or LocalPlayer():GetNWInt("HLRPG_XP")
+                    if myMoney < (info.price or 0) then
+                        surface.SetDrawColor(255, 0, 0, 40)
+                        surface.DrawRect(0, 0, w, h)
+                    end
+                end
+            end
+
+            -- === SEÇİLİ EFEKTİ (Overlay) ===
             local overlay = vgui.Create("DPanel", icon)
             overlay:Dock(FILL)
             overlay:SetMouseInputEnabled(false)
@@ -124,29 +167,40 @@ function OpenPlayerHub()
                 if activeTab == "Inventory" and isEquipped then
                     surface.SetDrawColor(0, 255, 0, 200)
                     surface.DrawOutlinedRect(0, 0, w, h, 2)
+                    surface.DrawOutlinedRect(1, 1, w-2, h-2, 1)
+                    draw.SimpleText("✔", "DermaDefaultBold", w - 12, 2, Color(0, 255, 0))
                 end
             end
             
             icon.DoClick = function()
                 surface.PlaySound("ui/buttonclick.wav")
                 
-                net.Start("HLRPG_HubAction")
-                    net.WriteString(activeTab == "Shop" and "buy" or "equip")
-                    net.WriteString(id)
-                net.SendToServer()
+                if activeTab == "Shop" then
+                    net.Start("HLRPG_Shop_Purchase")
+                        net.WriteString(id)
+                    net.SendToServer()
+                else
+                    net.Start("HLRPG_HubAction")
+                        net.WriteString("equip") -- Sabit eylem
+                        net.WriteString(id)
+                    net.SendToServer()
+                end
 
-                timer.Simple(0.3, function() if IsValid(frame) then frame:Refresh() end end)
+                timer.Simple(0.2, function() 
+                    if IsValid(frame) then frame:Refresh() end 
+                end)
             end
         end
     end
 
     function frame:Refresh()
         mainBody:Clear()
+        -- Kategoriler
         CreateCategoryBox(mainBody, "Sarf Malzemeleri", 0, 0, 435, 180, "Temporary Upgrades", "consumable")
         CreateCategoryBox(mainBody, "Kalıcı Geliştirmeler", 445, 0, 435, 180, "Permanent Upgrades", "upgrade")
         CreateCategoryBox(mainBody, "Petler", 0, 190, 435, 180, "Pets", "pet")
         CreateCategoryBox(mainBody, "Şapkalar & Aksesuarlar", 445, 190, 435, 180, "Hats", "hat")
-        CreateCategoryBox(mainBody, "Zırhlar & Karakterler", 0, 380, 880, 190, "Suits", "suit")
+        CreateCategoryBox(mainBody, "Zırhlar & Karakterler", 0, 380, 880, 210, "Suits", "suit")
     end
 
     frame:Refresh()

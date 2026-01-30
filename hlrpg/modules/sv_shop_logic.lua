@@ -1,20 +1,32 @@
--- addons/halflife_rpg/lua/hlrpg/modules/sv_shop_logic.lua
-if not SERVER then return end
+-- sv_shop_logic.lua
+
+-- Oyuncu bazlı tıklama hız sınırı (Antispam)
+local shopCooldowns = {}
 
 util.AddNetworkString("HLRPG_Shop_Purchase")
 
 net.Receive("HLRPG_Shop_Purchase", function(len, ply)
     local itemID = net.ReadString()
     local itemData = HLRPG_Assets[itemID]
-    if not itemData then return end
+    
+    if not IsValid(ply) or not itemData then return end
 
-    -- Bakiye Kontrolü
+    local curTime = CurTime()
+    if (shopCooldowns[ply] or 0) > curTime then return end
+    shopCooldowns[ply] = curTime + 0.5
+
+    if itemData.group != "Temporary Upgrades" then
+        if ply:GetNWBool("HLRPG_Owned_" .. itemID, false) then
+            ply:ChatPrint("[SHOP] Bu eşyaya zaten sahipsin!")
+            return
+        end
+    end
+
     local currency = itemData.currency or "XP"
     local price = itemData.price or 0
     local currentBal = (currency == "TP") and (ply.HLRPG_TempPoints or 0) or (ply.HLRPG_XP or 0)
 
     if currentBal >= price then
-        -- Ödeme
         if currency == "TP" then
             ply.HLRPG_TempPoints = currentBal - price
             ply:SetNWInt("HLRPG_TempPoints", ply.HLRPG_TempPoints)
@@ -23,17 +35,12 @@ net.Receive("HLRPG_Shop_Purchase", function(len, ply)
             ply:SetNWInt("HLRPG_XP", ply.HLRPG_XP)
         end
 
-        -- Sahiplik Verme (NWBool üzerinden inventory'de görünmesi için)
         ply:SetNWBool("HLRPG_Owned_" .. itemID, true)
 
-        -- Eğer bu bir modifier (upgrade) ise aktif et
-        if itemData.modifier and ply.AddRPGModifier then
-            ply:AddRPGModifier(itemData.modifier, itemData.modVal)
-        end
-
         ply:EmitSound("items/suitchargeok1.wav")
-        ply:ChatPrint("[SHOP] Satın alındı: " .. itemData.name)
+        ply:ChatPrint("[SHOP] Başarıyla satın alındı: " .. itemData.name)
     else
         ply:ChatPrint("[SHOP] Yetersiz bakiye!")
+        ply:EmitSound("buttons/button11.wav")
     end
 end)
