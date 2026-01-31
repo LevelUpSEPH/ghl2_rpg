@@ -14,6 +14,8 @@ function HLRPG_ApplyModifier(ply, modID, modVal, scope)
     
     ply:AddRPGModifier(modID, modVal or 1, targetScope)
 
+    ply:SetNWBool("HLRPG_ModActive_" .. modID, true)
+
     -- UI için NWBool setle (itemID üzerinden gitmek daha doğru olur)
     ply:ChatPrint(string.format("[MOD] %s aktif edildi (%s)", modDef.Name, targetScope))
     ply:EmitSound("buttons/button9.wav", 70, 150)

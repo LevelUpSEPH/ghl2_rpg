@@ -103,10 +103,18 @@ function OpenPlayerHub()
                 isEquipped = LocalPlayer():GetNWString("HLRPG_ActiveSuit", "") == id
             elseif groupName == "Pets" then
                 isEquipped = LocalPlayer():GetNWString("HLRPG_ActivePet", "none") == id
+            elseif groupName == "Hats" then
+                isEquipped = LocalPlayer():GetNWString("HLRPG_ActiveHat", "none") == id
+            elseif groupName == "Permanent Upgrades" then
+                isEquipped = LocalPlayer():GetNWBool("HLRPG_ModActive_" .. id, false)
             end
 
             local icon = grid:Add("SpawnIcon")
-            if info.model then icon:SetModel(info.model) end
+            if info.model then 
+                icon:SetModel(info.model)
+            elseif info.icon then
+                icon:SetIcon(info.icon)
+            end
             icon:SetSize(64, 64)
             icon:SetTooltip(nil)
 
@@ -120,11 +128,11 @@ function OpenPlayerHub()
                     detailPanel.ItemLvl = nil
                 else
                     detailPanel.ItemPrice = nil
-                    -- Eğer pet ise seviyesini göster
                     if groupName == "Pets" then
-                        local stage = LocalPlayer():GetNWInt("PetStage_" .. id, 0)
                         local level = LocalPlayer():GetNWInt("PetLevel_" .. id, 1)
-                        detailPanel.ItemLvl = stage + level
+                        local name = LocalPlayer():GetNWString("HLRPG_CustomName_" .. id, info.name)
+                        detailPanel.ItemName = name
+                        detailPanel.ItemLvl = level
                     else
                         detailPanel.ItemLvl = nil
                     end
@@ -173,22 +181,38 @@ function OpenPlayerHub()
             end
             
             icon.DoClick = function()
+                -- Eğer Envanterde bir pete tıklandıysa menü aç
+                if activeTab == "Inventory" and groupName == "Pets" then
+                    local menu = DermaMenu()
+                    
+                    menu:AddOption("Kuşan / Geri Gönder", function()
+                        net.Start("HLRPG_HubAction")
+                            net.WriteString("equip")
+                            net.WriteString(id)
+                        net.SendToServer()
+                    end):SetIcon("icon16/monkey.png")
+
+                    menu:AddOption("Peti Özelleştir (İsim/Renk)", function()
+                        HLRPG_OpenPetCustomizer(id) -- Yeni oluşturduğumuz fonksiyon
+                    end):SetIcon("icon16/palette.png")
+
+                    menu:Open()
+                    return
+                end
+
                 surface.PlaySound("ui/buttonclick.wav")
-                
                 if activeTab == "Shop" then
                     net.Start("HLRPG_Shop_Purchase")
                         net.WriteString(id)
                     net.SendToServer()
                 else
                     net.Start("HLRPG_HubAction")
-                        net.WriteString("equip") -- Sabit eylem
+                        net.WriteString("equip")
                         net.WriteString(id)
                     net.SendToServer()
                 end
-
-                timer.Simple(0.2, function() 
-                    if IsValid(frame) then frame:Refresh() end 
-                end)
+                
+                timer.Simple(0.2, function() if IsValid(frame) then frame:Refresh() end end)
             end
         end
     end

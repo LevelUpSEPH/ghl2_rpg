@@ -62,7 +62,7 @@ HLRPG.PetData = {
             },
             [2] = { 
                 class = "npc_combine_s", name = "Combine Er", 
-                modelScale = 0.5,
+                modelScale = 0.8,
                 weapon = "weapon_smg1", -- Silah burada tanımlı
                 baseHealth = 100, healthPerLevel = 20,
                 dmgMultiplier = 1.0, evolutionThreshold = 1,
@@ -70,7 +70,7 @@ HLRPG.PetData = {
             },
             [3] = { 
                 class = "npc_combine_s", name = "Combine Elite", 
-                modelScale = 0.5,
+                modelScale = 0.8,
                 weapon = "weapon_ar2", -- Evrimleşince silah değişir
                 baseHealth = 250, healthPerLevel = 30,
                 dmgMultiplier = 2.0, evolutionThreshold = 1,

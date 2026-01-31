@@ -64,7 +64,7 @@ function HLRPG_ApplyEquipment(ply, type, value)
         if suitData then
             ply.HLRPG_Suit = value
             ply:ChatPrint("Zırh Kuşandın: " .. suitData.name)
-            
+            ply:SetNWString("HLRPG_ActiveSuit", value)
             net.Start("HLRPG_Sync_Suit")
                 net.WriteEntity(ply)
                 net.WriteString(suitData.model or "none")

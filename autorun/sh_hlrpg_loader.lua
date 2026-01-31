@@ -59,6 +59,7 @@ LoadFile("hlrpg/ui/cl_difficulty_ui.lua")
 LoadFile("hlrpg/ui/cl_xp_notify.lua")
 LoadFile("hlrpg/ui/cl_killfeed_cleaner.lua")
 LoadFile("hlrpg/ui/cl_player_hub.lua")
+LoadFile("hlrpg/ui/cl_pet_customizer.lua")
 
 LoadFile("hlrpg/modules/sv_npc_damage.lua")
 LoadFile("hlrpg/modules/sv_player_cleanup.lua")

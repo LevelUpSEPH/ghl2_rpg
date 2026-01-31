@@ -1,6 +1,8 @@
 -- addons/halflife_rpg/lua/hlrpg/modules/sv_pet_core.lua
 if not SERVER then return end
 
+util.AddNetworkString("HLRPG_UpdatePetCustomization")
+
 local function GetEvoData(petID, stage)
     return HLRPG.PetData[petID] and HLRPG.PetData[petID].Evolutions[stage]
 end
@@ -36,6 +38,12 @@ function HLRPG_SummonPet(ply, petID)
     local evo = pData.Evolutions[stats.stage]
     local pet = ents.Create(stats.class)
     if not IsValid(pet) then return end
+    
+    local savedName = ply:GetNWString("HLRPG_CustomName_" .. petID, stats.name)
+    local savedColorVec = ply:GetNWVector("HLRPG_CustomColorVec_" .. petID, Vector(1, 1, 1))
+
+    pet:SetNWString("HLRPG_PetEntityName", savedName)
+    pet:SetNWVector("HLRPG_CustomColor", savedColorVec)
 
     if evo.modelScale then
         pet:SetModelScale(evo.modelScale, 0)
@@ -70,6 +78,8 @@ function HLRPG_SummonPet(ply, petID)
 
     pet:SetMaxHealth(stats.maxHealth)
     pet:SetHealth(stats.maxHealth)
+
+    pet:SetColor(Color(savedColorVec.x * 255, savedColorVec.y * 255, savedColorVec.z * 255))
 
     ply.CurrentRPGPet = pet
     ply:SetNWEntity("HLRPG_ActivePetEntity", pet)
@@ -167,5 +177,25 @@ hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflict
         else
             ply:SetNWInt("PetXP_" .. petID, currentXP)
         end
+    end
+end)
+
+net.Receive("HLRPG_UpdatePetCustomization", function(len, ply)
+    local petID = net.ReadString()
+    local name = net.ReadString()
+    local col = net.ReadColor()
+    local colVec = Vector(col.r / 255, col.g / 255, col.b / 255)
+
+    -- Veriyi oyuncunun üzerine mühürle (Oturum boyunca kalır)
+    ply:SetNWString("HLRPG_CustomName_" .. petID, name)
+    ply:SetNWVector("HLRPG_CustomColorVec_" .. petID, colVec)
+
+    -- Sahadaki peti güncelle
+    local pet = ply.CurrentRPGPet
+    if IsValid(pet) and pet.PetID == petID then
+        pet:SetNWString("HLRPG_PetEntityName", name)
+        pet:SetNWVector("HLRPG_CustomColor", colVec)
+        pet:SetRenderMode(RENDERMODE_TRANSCOLOR)
+        pet:SetColor(col)
     end
 end)
