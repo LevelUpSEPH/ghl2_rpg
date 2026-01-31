@@ -73,7 +73,8 @@ HLRPG_Assets = {
         currency = "XP",
         offset = Vector(4.8, 1.35, 0.065),
         angle = Angle(0, 0, 90),
-        scale = 0.5
+        scale = 0.5,
+        unbuyable = true
     },
     ["hat_headcrab"] = { 
         name = "Headcrab Hat", 

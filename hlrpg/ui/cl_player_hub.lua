@@ -94,6 +94,7 @@ function OpenPlayerHub()
             local isOwned = LocalPlayer():GetNWBool("HLRPG_Owned_" .. id, false)
             
             -- Filtreleme
+            if activeTab == "Shop" and info.unbuyable then continue end
             if activeTab == "Shop" and isOwned and groupName != "Temporary Upgrades" then continue end
             if activeTab == "Inventory" and not isOwned then continue end
 
