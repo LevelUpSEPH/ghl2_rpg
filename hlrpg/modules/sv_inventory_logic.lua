@@ -17,7 +17,9 @@ function HLRPG_Inventory_EquipRequest(ply, itemID)
     if group == "Suits" or group == "Models" then
         if ply.HLRPG_Suit == itemID or ply.HLRPG_Model == itemData.model then
             ply.HLRPG_Suit = "none"
-            ply:SetModel(ply.HLRPG_DefaultModel or "models/player/kleiner.mdl")
+            ply:SetNWString("HLRPG_ActiveSuit", "")
+            model = ply:GetNWString("HLRPG_ActiveModel", "models/player/kleiner.mdl")
+            ply:SetModel(model)
             net.Start("HLRPG_Sync_Suit")
                 net.WriteEntity(ply)
                 net.WriteString("none")

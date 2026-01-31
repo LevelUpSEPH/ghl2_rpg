@@ -52,6 +52,7 @@ function HLRPG_ApplyEquipment(ply, type, value)
     if type == "model" then
         ply:SetModel(value)
         ply.HLRPG_Model = value
+        ply:SetNWString("HLRPG_ActiveModel", value)
         ply:SetupHands() 
         ply:ChatPrint("Kıyafet değişti.")
 

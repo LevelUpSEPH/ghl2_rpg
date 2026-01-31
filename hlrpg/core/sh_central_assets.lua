@@ -60,7 +60,7 @@ HLRPG_Assets = {
         type = "hat",
         price = 1500, 
         currency = "XP",
-        offset = Vector(0, 0, 5),
+        offset = Vector(5, 0, 0),
         angle = Angle(0, 0, 0)
     },
     ["hat_helibomb"] = { 
