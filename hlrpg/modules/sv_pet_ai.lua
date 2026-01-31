@@ -4,32 +4,39 @@ if not SERVER then return end
 function HLRPG_SetupPetRelationships(pet, ply)
     if not IsValid(pet) or not IsValid(ply) then return end
 
-    -- 1. KRİTİK: Petin Squad bağını tamamen kopar (Hataları kesen asıl kısım)
     if pet:IsNPC() then
         pet:SetKeyValue("squadname", "")
         pet:Fire("ClearSquad")
     end
 
     pet.Classify = function() return CLASS_PLAYER_ALLY end
-    
-    -- Oyuncuyla ilişkiyi tazele
     pet:AddEntityRelationship(ply, D_LI, 99)
+
+    -- 1. DİĞER OYUNCULARI KORU
+    for _, otherPly in ipairs(player.GetAll()) do
+        if otherPly == ply then continue end
+        -- Pet, sahibinin dışındaki diğer oyunculara da dostça davransın
+        pet:AddEntityRelationship(otherPly, D_LI, 99)
+    end
 
     -- 2. Çevredeki NPC'leri tara
     for _, ent in ipairs(ents.FindInSphere(pet:GetPos(), 1000)) do
         if not IsValid(ent) or ent == pet or ent == ply or not ent:IsNPC() then continue end
         
+        -- Eğer taranan NPC başka birinin PETİ ise, ona da saldırma
+        if ent.IsHLRPGPet then
+            pet:AddEntityRelationship(ent, D_LI, 99)
+            ent:AddEntityRelationship(pet, D_LI, 99)
+            continue
+        end
+
         local disposition = ent:Disposition(ply)
         
-        -- 3. KRİTİK: AddRelationship yerine AddEntityRelationship kullanıyoruz
-        -- Bu sayede tüm sınıfı değil, sadece o spesifik NPC'yi hedef alırız.
-        
         if disposition == D_LI then
-            -- Oyuncunun dostuysa (Alyx, Rebel vb.)
             pet:AddEntityRelationship(ent, D_LI, 99)
             ent:AddEntityRelationship(pet, D_LI, 99)
         elseif disposition == D_HT or disposition == D_FRIGHT then
-            -- Oyuncunun düşmanıysa (Combine, Zombie vb.)
+            -- Sadece NPC düşmanlara saldır (Oyuncuları bu döngüde ellemiyoruz)
             pet:AddEntityRelationship(ent, D_HT, 99)
             ent:AddEntityRelationship(pet, D_HT, 99)
         end
