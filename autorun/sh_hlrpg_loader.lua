@@ -82,6 +82,7 @@ LoadFile("hlrpg/modules/sv_pet_core.lua")
 LoadFile("hlrpg/modules/sv_pet_ai.lua")
 
 LoadFile("hlrpg/core/sh_achievements.lua")
+LoadFile("hlrpg/core/sh_trigger_maps.lua")
 LoadFile("hlrpg/modules/sv_achievement_core.lua")
 LoadFile("hlrpg/modules/sv_achievement_logic.lua")
 LoadFile("hlrpg/modules/cl_announcer.lua")
