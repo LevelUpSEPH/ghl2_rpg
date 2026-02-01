@@ -39,32 +39,4 @@ DEF["mod_double_pellet"] = {
     end
 }
 
-DEF["mod_lifesteal"] = {
-    Name = "Vampirism",
-    Desc = "Verilen hasarın bir kısmını can olarak çeker.",
-    
-    OnDamage = function(ply, target, dmginfo, val)
-        local dmg = dmginfo:GetDamage()
-        local heal = dmg * (val or 0.1) -- %10 varsayılan
-        
-        local max = ply:GetMaxHealth()
-        local current = ply:Health()
-        if current < max then
-            ply:SetHealth(math.min(max, current + heal))
-        end
-    end
-}
-
-DEF["mod_knockback"] = {
-    Name = "Heavy Impact",
-    Desc = "Hedefi geri iter.",
-    
-    OnDamage = function(ply, target, dmginfo, val)
-        local force = val or 300
-        local dir = ply:GetAimVector() * force
-        dir.z = 50 -- Hafif yukarı
-        target:SetVelocity(dir)
-    end
-}
-
 HLRPG.Modifiers.Definitions = DEF

@@ -60,6 +60,8 @@ LoadFile("hlrpg/ui/cl_xp_notify.lua")
 LoadFile("hlrpg/ui/cl_killfeed_cleaner.lua")
 LoadFile("hlrpg/ui/cl_player_hub.lua")
 LoadFile("hlrpg/ui/cl_pet_customizer.lua")
+LoadFile("hlrpg/ui/cl_achievement_hud.lua")
+LoadFile("hlrpg/ui/cl_achievement_menu.lua")
 
 LoadFile("hlrpg/modules/sv_npc_damage.lua")
 LoadFile("hlrpg/modules/sv_player_cleanup.lua")
@@ -78,6 +80,11 @@ LoadFile("hlrpg/modules/cl_zombie_pilot.lua")
 LoadFile("hlrpg/ui/cl_pet_hud.lua")
 LoadFile("hlrpg/modules/sv_pet_core.lua")
 LoadFile("hlrpg/modules/sv_pet_ai.lua")
+
+LoadFile("hlrpg/core/sh_achievements.lua")
+LoadFile("hlrpg/modules/sv_achievement_core.lua")
+LoadFile("hlrpg/modules/sv_achievement_logic.lua")
+LoadFile("hlrpg/modules/cl_announcer.lua")
 
 LoadFile("hlrpg/modules/sv_test_commands.lua")
 

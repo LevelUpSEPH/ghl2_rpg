@@ -86,6 +86,21 @@ function HLRPG_SyncEntireServerToPlayer(newPlayer)
     end
 end
 
+function HLRPG_GiveItem(ply, itemID, reason)
+    if not IsValid(ply) or not itemID then return false end
+    
+    if ply:GetNWBool("HLRPG_Owned_" .. itemID, false) then return false end
+
+    ply:SetNWBool("HLRPG_Owned_" .. itemID, true)
+    
+    local itemData = HLRPG_Assets[itemID]
+    local itemName = itemData and itemData.name or itemID
+    
+    ply:ChatPrint("[INVENTORY] Yeni eşya eklendi: " .. itemName .. " (" .. (reason or "Sistem") .. ")")
+    
+    return true
+end
+
 hook.Add("PlayerInitialSpawn", "HLRPG_Sync_LateJoiners", function(ply)
     timer.Simple(2, function()
         if IsValid(ply) then

@@ -2,93 +2,95 @@
 HLRPG = HLRPG or {}
 
 HLRPG.PetData = {
-    ["pet_headcrab"] = {
+    ["pet_zombie"] = {
         Evolutions = {
             [1] = { 
-                class = "npc_headcrab", name = "Yavru Headcrab", 
-                baseHealth = 50, healthPerLevel = 10,
-                dmgMultiplier = 10.0, evolutionThreshold = 2,
-                xpRequired = 1, xpIncreasePerLevel = 1
+                class = "npc_headcrab", name = "Parasyte", 
+                baseHealth = 100, healthPerLevel = 15,
+                dmgMultiplier = 1.0, 
+                xpRequired = 3, xpIncreasePerLevel = 2
             },
-            [2] = { 
-                class = "npc_zombie_torso", name = "Sürünen Gövde", 
-                baseHealth = 150, healthPerLevel = 20,
-                dmgMultiplier = 1.5, evolutionThreshold = 3,
-                xpRequired = 1, xpIncreasePerLevel = 10
+            [5] = { -- Hızlı evrim
+                class = "npc_zombie_torso", name = "Half Baked", 
+                baseHealth = 400, healthPerLevel = 40,
+                dmgMultiplier = 2.0,
+                xpRequired = 15, xpIncreasePerLevel = 4
             },
-            [3] = { 
-                class = "npc_zombine", name = "Zombine", 
-                baseHealth = 800, healthPerLevel = 60,
+            [12] = { 
+                class = "npc_zombie", name = "Full Deal", 
+                baseHealth = 800, healthPerLevel = 70,
                 dmgMultiplier = 3.5,
-                xpRequired = 60, xpIncreasePerLevel = 20,
-                OnSpawn = function(pet) pet:SetInternalVariable("m_iNumGrenades", 0) end -- Bomba yasağı
+                xpRequired = 40, xpIncreasePerLevel = 8
             },
             [20] = { 
-                class = "npc_zombine", name = "Zombine", 
-                baseHealth = 20000,
-                dmgMultiplier = 5,
-                xpRequired = 60, xpIncreasePerLevel = 20,
-                OnSpawn = function(pet) pet:SetInternalVariable("m_iNumGrenades", 0) end -- Bomba yasağı
+                class = "npc_zombine", name = "Comzine",
+                baseHealth = 5000, healthPerLevel = 400,
+                dmgMultiplier = 8.0,
+                xpRequired = 150, xpIncreasePerLevel = 30
             }
         }
     },
     ["pet_antlion"] = {
         Evolutions = {
-            [1] = { 
-                class = "npc_antlion_worker", name = "Yavru Antlion", 
-                baseHealth = 80, healthPerLevel = 15,
+            [1] = {
+                class = "npc_antlion", name = "Bee", 
+                baseHealth = 150, healthPerLevel = 25,
                 dmgMultiplier = 1.2,
-                xpRequired = 12, xpIncreasePerLevel = 6,
-                OnEnemyFound = function(pet, enemy)
-                    local dist = pet:GetPos():Distance(enemy:GetPos())
-                    if dist > 200 then pet:SetSchedule(SCHED_RANGE_ATTACK1) end -- Asit önceliği
-                end
+                xpRequired = 5, xpIncreasePerLevel = 2,
+                OnSpawn = function(p) p:SetModelScale(0.7) end
             },
-            [10] = { 
-                class = "npc_antlion_guard", name = "Koruyucu Antlion", 
-                baseHealth = 500, healthPerLevel = 50,
-                dmgMultiplier = 4.0,
-                xpRequired = 50, xpIncreasePerLevel = 18
+            [7] = {
+                class = "npc_antlion_worker", name = "Bee", 
+                baseHealth = 150, healthPerLevel = 25,
+                dmgMultiplier = 1.2,
+                xpRequired = 30, xpIncreasePerLevel = 5,
+                OnSpawn = function(p) p:SetModelScale(0.7) end
+            },
+            [15] = {
+                class = "npc_antlion_guard", name = "Antlion Muhafızı",
+                modelScale = 0.5,
+                baseHealth = 3000, healthPerLevel = 300,
+                dmgMultiplier = 6.0,
+                xpRequired = 100, xpIncreasePerLevel = 25
             }
         }
     },
-    ["pet_rollermine"] = {
+    ["pet_combine"] = {
         Evolutions = {
             [1] = { 
-                class = "npc_rollermine", name = "Combine Er", 
-                baseHealth = 100, healthPerLevel = 20,
-                dmgMultiplier = 1.0, evolutionThreshold = 1,
-                xpRequired = 1, xpIncreasePerLevel = 7
+                class = "npc_rollermine", name = "Gözcü Drone", 
+                baseHealth = 80, healthPerLevel = 10,
+                dmgMultiplier = 1.0, 
+                xpRequired = 10, xpIncreasePerLevel = 3
             },
-            [2] = { 
-                class = "npc_combine_s", name = "Combine Er", 
-                modelScale = 0.8,
-                weapon = "weapon_smg1", -- Silah burada tanımlı
-                baseHealth = 100, healthPerLevel = 20,
-                dmgMultiplier = 1.0, evolutionThreshold = 1,
-                xpRequired = 1, xpIncreasePerLevel = 7
+            [6] = { 
+                class = "npc_metropolice", name = "Metropol Polisi", 
+                weapon = "weapon_pistol",
+                baseHealth = 350, healthPerLevel = 30,
+                dmgMultiplier = 1.8,
+                xpRequired = 25, xpIncreasePerLevel = 6
             },
-            [3] = { 
+            [10] = { 
+                class = "npc_combine_s", name = "Kombine Asker", 
+                weapon = "weapon_smg1",
+                baseHealth = 700, healthPerLevel = 60,
+                dmgMultiplier = 2.5,
+                xpRequired = 50, xpIncreasePerLevel = 8
+            },
+            [14] = { 
                 class = "npc_combine_s", name = "Combine Elite", 
-                modelScale = 0.8,
-                weapon = "weapon_ar2", -- Evrimleşince silah değişir
-                baseHealth = 250, healthPerLevel = 30,
-                dmgMultiplier = 2.0, evolutionThreshold = 1,
-                xpRequired = 1, xpIncreasePerLevel = 14
+                weapon = "weapon_ar2",
+                modelScale = 1.1,
+                baseHealth = 1200, healthPerLevel = 100,
+                dmgMultiplier = 4.0,
+                xpRequired = 500, xpIncreasePerLevel = 100
             },
-            [4] = { 
-                class = "npc_hunter", name = "Combine Komutan",
-                modelScale = 0.5,
-                baseHealth = 600, healthPerLevel = 50,
-                dmgMultiplier = 3.5,
-                xpRequired = 80, xpIncreasePerLevel = 25
-            },
-            [100] = { 
-                class = "npc_hunter", name = "Combine Komutan",
-                modelScale = 0.5,
-                baseHealth = 600, healthPerLevel = 50,
-                dmgMultiplier = 3.5,
-                xpRequired = 80, xpIncreasePerLevel = 25
+            [20] = { 
+                class = "npc_hunter", name = "Avcı Ünite", 
+                modelScale = 0.6,
+                baseHealth = 4500, healthPerLevel = 500,
+                dmgMultiplier = 7.0,
+                xpRequired = 3000, xpIncreasePerLevel = 700
             }
         }
     }
