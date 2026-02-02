@@ -42,6 +42,20 @@ function HLRPG_AwardAchievement(ply, achID)
     net.Broadcast()
 end
 
+function HLRPG_AwardLambda(ply, lambdaID)
+    if not IsValid(ply) or not ply:IsPlayer() then return end
+    
+    ply.HLRPG_FoundLambdas = ply.HLRPG_FoundLambdas or {}
+
+    if ply.HLRPG_FoundLambdas[lambdaID] then return end
+
+    ply.HLRPG_FoundLambdas[lambdaID] = true
+
+    if HLRPG.Lambda and HLRPG.Lambda.OnFound then
+        HLRPG.Lambda.OnFound(ply, lambdaID)
+    end
+end
+
 -- 4. MENÜ İSTEĞİNİ KARŞILA (Sadece sunucudaki güncel tabloyu gönderir)
 hook.Add("PlayerSay", "HLRPG_AchievementChatCommand", function(ply, text)
     local cmd = string.lower(text)

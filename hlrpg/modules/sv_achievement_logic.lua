@@ -1,5 +1,7 @@
 -- sv_achievement_logic.lua
 
+util.AddNetworkString("HLRPG_LambdaNotify")
+
 hook.Add("AcceptInput", "HLRPG_Achievement_Bridge", function(ent, input, activator, caller, value)
     local targetName = IsValid(ent) and ent:GetName() or ""
     local callerName = IsValid(caller) and caller:GetName() or ""
@@ -8,29 +10,30 @@ hook.Add("AcceptInput", "HLRPG_Achievement_Bridge", function(ent, input, activat
     local isTriggered = (input == "Trigger" or input == "FireEvent" or input == "OnFound" or input == "Start")
     if not isTriggered then return end
 
-    -- Öncelik ismini belirle (Target varsa target, yoksa caller)
     local name = (targetName != "") and targetName or callerName
     if name == "" then return end
 
-    -- 1. LAMBDA KONTROLÜ (Harita Önemli!)
-    -- Lambda anahtarını harita ön ekiyle oluşturuyoruz: "d1_canals_01_relay_achievement_cache_1"
     local lambdaKey = currentMap .. "_" .. name
-    print("[HLRPG] Lambda Kontrolü: " .. lambdaKey)
     local lambdaID = HLRPG.LambdaMap[lambdaKey]
     
     if lambdaID then
-        print("[HLRPG] Lambda Başarımları Tetiklendi: " .. lambdaKey .. " -> " .. lambdaID)
         local ply = (IsValid(activator) and activator:IsPlayer()) and activator or player.GetAll()[1]
+        
+        HLRPG_AwardLambda(ply, lambdaID)
         if HLRPG.Lambda and HLRPG.Lambda.OnFound then
             HLRPG.Lambda.OnFound(ply, lambdaID)
-        else
-            print("[HLRPG] Lambda Yakalandı: " .. lambdaID)
         end
+
+        -- Lambda'ya Özel Bildirim Gönder
+        net.Start("HLRPG_LambdaNotify")
+            net.WriteString(lambdaID)
+        net.Send(ply)
+        
         return
     end
 
-    -- 2. ACHIEVEMENT KONTROLÜ (Harita Önemli DEĞİL!)
-    -- Sadece 'name' üzerinden (lcs_CupCop_Fail gibi) saf kontrol yapıyoruz
+    print("[HLRPG] ACH Denemesi: " .. name)
+
     local achID = HLRPG.AchievementTriggerMap[name]
     if achID then
         if HLRPG.Achievements[achID] == nil then
