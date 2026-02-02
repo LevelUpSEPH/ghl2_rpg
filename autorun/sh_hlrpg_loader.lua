@@ -88,6 +88,7 @@ LoadFile("hlrpg/core/sh_achievements.lua")
 LoadFile("hlrpg/core/sh_trigger_maps.lua")
 LoadFile("hlrpg/modules/sv_achievement_core.lua")
 LoadFile("hlrpg/modules/sv_achievement_logic.lua")
+LoadFile("hlrpg/modules/custom_achievement_listeners/sv_barnacle_bowling.lua")
 LoadFile("hlrpg/modules/cl_announcer.lua")
 
 LoadFile("hlrpg/modules/sv_test_commands.lua")

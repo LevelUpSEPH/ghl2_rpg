@@ -42,7 +42,7 @@ HLRPG.Achievements = {
         name = "Barnacle Bowling",
         desc = "Use barnacles to your advantage",
         xp = 350,
-        rewardItem = "",
+        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_barnacle_bowling.png",
         isGlobal = true
     },
@@ -52,5 +52,22 @@ HLRPG.Achievements = {
         xp = 400,
         rewardItem = "pet_vortigaunt",
         isGlobal = true
-    }
+    },
+    ["HL2_KEEP_OFF_SAND"] = {
+        name = "Keep Off The Sand",
+        desc = "Avoid the sand traps",
+        xp = 3000,
+        rewardItem = nil,
+        icon = "resources/icons/achievements/hl2_keep_off_sand.png",
+        isGlobal = true,
+        isReversed = true
+    },
+    ["HL2_LAMBDA_LOCATOR"] = {
+        name = "Lambda Locator",
+        desc = "Find all lambda caches",
+        xp = 25000,
+        rewardItem = nil,
+        icon = "resources/icons/achievements/hl2_lambda_locator.png",
+        isGlobal = false
+    },
 }
