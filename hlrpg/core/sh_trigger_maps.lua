@@ -9,6 +9,7 @@ HLRPG.AchievementTriggerMap = {
     ["kill_mtport_rl_1"] = "HL2_WHAT_CAT",
     ["relay_found_HEVplate"] = "HL2_VORTIGAL_ENERGY",
     ["crowbar_weapon"] = "HL2_TRUSTY_HARDWARE",
+    ["sand_trap_trigger"] = "HL2_KEEP_OFF_SAND", -- d2_coast_11_relay_expanse_spawn_1 fail
 }
 
 HLRPG.LambdaMap = {
@@ -40,4 +41,21 @@ HLRPG.LambdaMap = {
     ["d2_coast_04_relay_cache"] = "L26",
     ["d2_coast_05_relay_cache"] = "L27",
     ["d2_coast_07_relay_cache"] = "L28",
+    ["d2_coast_09_relay_cache"] = "L29",
+    ["d2_coast_11_relay_cache"] = "L30",
+    ["d2_prison_02_relay_cache"] = "L31",
+    ["d2_prison_03_relay_cache"] = "L32",
+    ["d2_prison_05_relay_cache"] = "L33",
+    ["d2_prison_06_relay_cache"] = "L34",
+    ["d3_c17_02_relay_achievement_cache_1"] = "L35",
+    ["d3_c17_04_relay_achievement_cache_1"] = "L36",
+    ["d3_c17_05_relay_achievement_cache_1"] = "L37",
+    ["d3_c17_06a_relay_achievement_cache_1"] = "L38",
+    ["d3_c17_06b_relay_achievement_cache_1"] = "L39",
+    ["d3_c17_06b_relay_achievement_cache_2"] = "L40",
+    ["d3_c17_08_relay_achievement_cache_3"] = "L41",
+    ["d3_c17_08_relay_achievement_cache_1"] = "L42",
+    ["d3_c17_08_relay_achievement_cache_2"] = "L43",
+    ["d3_c17_08_relay_achievement_cache_4"] = "L44",
+    ["d3_c17_12b_relay_achievement_cache_1"] = "L45",
 }
