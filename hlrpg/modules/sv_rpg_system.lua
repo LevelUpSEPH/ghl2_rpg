@@ -51,15 +51,6 @@ hook.Add("PlayerSpawn", "HLRPG_ApplyStats", function(ply)
     end)
 end)
 
-hook.Add("EntityTakeDamage", "HLRPG_TrackDamage", function(target, dmginfo)
-    local attacker = dmginfo:GetAttacker()
-    if IsValid(target) and target:IsNPC() and IsValid(attacker) and attacker:IsPlayer() then
-        target.HLRPG_DamageTable = target.HLRPG_DamageTable or {}
-        local actualDmg = math.min(dmginfo:GetDamage(), target:Health())
-        target.HLRPG_DamageTable[attacker] = (target.HLRPG_DamageTable[attacker] or 0) + actualDmg
-    end
-end)
-
 hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
     if not npc.HLRPG_DamageTable then return end
 

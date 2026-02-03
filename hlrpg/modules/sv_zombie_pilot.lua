@@ -148,45 +148,6 @@ hook.Add("Think", "HLRPG_ZombiePilot_Logic", function()
     end
 end)
 
-hook.Add("EntityTakeDamage", "HLRPG_PreventDeath_ToZombie", function(target, dmginfo)
-    if target:IsPlayer() and not target.IsZombieForm then
-        local currentHealth = target:Health()
-        local incomingDamage = dmginfo:GetDamage()
-        
-        if (currentHealth - incomingDamage) <= 0 then
-            local hatID = target:GetNWString("HLRPG_ActiveHat", "")
-            local asset = HLRPG_Assets[hatID]
-
-            if asset and asset.OnDeathPrevention and not target.UsedZombieLife then
-                local currentHealth = target:Health()
-                if (currentHealth - dmginfo:GetDamage()) <= 0 then
-                    
-                    dmginfo:SetDamage(0)
-                    target:SetHealth(1)
-                    target.UsedZombieLife = true
-                    
-                    local success, err = pcall(function()
-                        asset.OnDeathPrevention(target)
-                    end)
-
-                    if not success then
-                        print("[HLRPG ERROR] OnDeathPrevention Hatası: ", err)
-                        -- Eğer zombi başlatılamadıysa oyuncuyu ölümsüz bırakma, öldür ki bugda kalmasın
-                        target:Kill() 
-                        return
-                    end
-                    if success then
-                        print("[HLRPG] OnDeathPrevention başarıyla çalıştırıldı.")
-                    end
-                    
-                    target:SetSaveValue("m_takedamage", 0)
-                    return true
-                end
-            end
-        end
-    end
-end)
-
 hook.Add("PostEntityTakeDamage", "HLRPG_ZombieDeath_Sync", function(ent, dmg, took)
     if ent.IsPilotEntity and ent:Health() <= 0 then
         local ply = ent.OwnerPly

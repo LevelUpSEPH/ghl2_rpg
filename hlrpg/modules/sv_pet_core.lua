@@ -105,37 +105,6 @@ function HLRPG_SummonPet(ply, petID)
     util.Effect("EntityDissolve", effectData)
 end
 
-hook.Add("EntityTakeDamage", "HLRPG_Pet_Damage_Master", function(target, dmginfo)
-    local attacker = dmginfo:GetAttacker()
-
-    if attacker.IsHLRPGPet and IsValid(attacker.OwnerPly) then
-        local stats = attacker.CurrentStats
-        if stats then
-            local finalScale = stats.dmgMultiplier + ((stats.level - 1) * 0.1)
-            dmginfo:ScaleDamage(finalScale)
-        end
-        
-        if target:IsPlayer() or (target:IsNPC() and target:Disposition(attacker.OwnerPly) == D_LI) then
-            dmginfo:SetDamage(0)
-            return true
-        end
-    end
-
-    if target.IsHLRPGPet and IsValid(target.OwnerPly) then
-        if attacker:IsPlayer() or (attacker:IsNPC() and attacker:Disposition(target.OwnerPly) == D_LI) then
-            dmginfo:SetDamage(0)
-            return true
-        end
-
-        timer.Simple(0, function()
-            if IsValid(target) and IsValid(target.OwnerPly) then
-                target.OwnerPly:SetNWInt("HLRPG_Pet_CurHP", target:Health())
-                target.OwnerPly:SetNWInt("HLRPG_Pet_MaxHP", target:GetMaxHealth())
-            end
-        end)
-    end
-end)
-
 hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflictor)
     if IsValid(attacker) and attacker.IsHLRPGPet then
         local ply = attacker.OwnerPly
