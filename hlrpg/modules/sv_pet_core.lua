@@ -26,6 +26,10 @@ function HLRPG_GetPetStats(ply, petID)
 end
 
 function HLRPG_SummonPet(ply, petID)
+    if IsSafeMap() then
+        ply:ChatPrint("[PET] Bu haritada evcil hayvan çağırmak yasak!")
+        return 
+    end
     if not IsValid(ply) or petID == "none" then return end
     
     local stats = HLRPG_GetPetStats(ply, petID)

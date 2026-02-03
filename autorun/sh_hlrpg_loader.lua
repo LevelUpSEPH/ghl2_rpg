@@ -31,6 +31,7 @@ LoadFile("hlrpg/config/sh_config.lua")
 LoadFile("hlrpg/core/sh_npc_names.lua")
 LoadFile("hlrpg/core/sh_difficulty_core.lua")
 LoadFile("hlrpg/core/sh_xp_config.lua")
+LoadFile("hlrpg/core/sh_nocombat_maps.lua")
 
 -- 2. Core Sistemler
 LoadFile("hlrpg/core/sv_database.lua")

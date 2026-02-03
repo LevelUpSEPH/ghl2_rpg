@@ -7,25 +7,19 @@ if not meta then
     return
 end
 
-function meta:SaveLambda(id)
-    local found = self:GetFoundLambdas()
-    found[id] = true
-    
-    self:SetPData("HLRPG_FoundLambdas", util.TableToJSON(found))
-    self.HLRPG_Lambdas = found
+function meta:SaveLambdas()
+    local data = util.TableToJSON(self.HLRPG_FoundLambdas or {})
+    self:SetPData("HLRPG_FoundLambdas", data)
 end
 
-function meta:GetFoundLambdas()
-    if self.HLRPG_Lambdas then return self.HLRPG_Lambdas end
-    
+function meta:LoadLambdas()
     local data = self:GetPData("HLRPG_FoundLambdas")
-    if data then
-        self.HLRPG_Lambdas = util.JSONToTable(data) or {}
+    if data and data != "" then
+        self.HLRPG_FoundLambdas = util.JSONToTable(data) or {}
     else
-        self.HLRPG_Lambdas = {}
+        self.HLRPG_FoundLambdas = {}
     end
-    
-    return self.HLRPG_Lambdas
+    return self.HLRPG_FoundLambdas
 end
 
 function meta:SaveXP(amount)
@@ -97,11 +91,12 @@ end
 
 function meta:LoadAchievements()
     local data = self:GetPData("HLRPG_Achievements")
-    if data then
+    if data and data != "" then
         self.UnlockedAchievements = util.JSONToTable(data) or {}
     else
         self.UnlockedAchievements = {}
     end
+    return self.UnlockedAchievements
 end
 
 function meta:LoadPetData()
@@ -167,8 +162,8 @@ end
 function meta:InitialRPGSetup()
     self:GetXP()        -- Cache'e al
     self:GetLevel()     -- Cache'e al
-    self:GetFoundLambdas()
     self:LoadAchievements()
+    self:LoadLambdas()
     self:LoadPetData()
     self:GetInventory()
     self:SyncInventoryToClient()

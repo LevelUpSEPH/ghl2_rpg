@@ -36,6 +36,8 @@ function HLRPG_AwardAchievement(ply, achID)
         net.WriteString(ach.icon or "")
     net.Send(ply)
 
+    ply:SaveAchievements()
+
     net.Start("HLRPG_AchievementAnnounce")
         net.WriteEntity(ply)
         net.WriteString(ach.name)
@@ -54,6 +56,12 @@ function HLRPG_AwardLambda(ply, lambdaID)
     if HLRPG.Lambda and HLRPG.Lambda.OnFound then
         HLRPG.Lambda.OnFound(ply, lambdaID)
     end
+
+    if table.Count(ply.HLRPG_FoundLambdas) == table.Count(HLRPG.LambdaMap) then
+        HLRPG_AwardAchievement(ply, "HL2_LAMBDA_LOCATOR")
+    end
+
+    ply:SaveLambdas()
 end
 
 -- 4. MENÜ İSTEĞİNİ KARŞILA (Sadece sunucudaki güncel tabloyu gönderir)
