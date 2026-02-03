@@ -39,6 +39,12 @@ HLRPG_Assets = {
         price = 3500,
         currency = "XP"
     },
+    ["pet_vortigaunt"] = {
+        name = "Vortigaunt Pet",
+        model = "models/vortigaunt.mdl",
+        group = "Pets",
+        unbuyable = true
+    },
     ["hat_metrocop"] = { 
         name = "Metrocop Helmet", 
         desc = "Şehir güvenliği vizörü. Wireframe görüşü sağlar.", 

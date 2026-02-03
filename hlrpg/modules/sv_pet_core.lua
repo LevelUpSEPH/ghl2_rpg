@@ -39,10 +39,17 @@ function HLRPG_SummonPet(ply, petID)
     local pet = ents.Create(stats.class)
     if not IsValid(pet) then return end
     
-    local savedName = ply:GetNWString("HLRPG_CustomName_" .. petID, stats.name)
-    local savedColorVec = ply:GetNWVector("HLRPG_CustomColorVec_" .. petID, Vector(1, 1, 1))
+    local savedName = ply:GetPData("PetName_" .. petID) or stats.name
+    local rawCol = ply:GetPData("PetColor_" .. petID)
 
     pet:SetNWString("HLRPG_PetEntityName", savedName)
+    local savedColorVec = Vector(1, 1, 1)
+    if rawCol then
+        local colTable = util.JSONToTable(rawCol)
+        if colTable and #colTable >= 3 then
+            savedColorVec = Vector(colTable[1] / 255, colTable[2] / 255, colTable[3] / 255)
+        end
+    end
     pet:SetNWVector("HLRPG_CustomColor", savedColorVec)
 
     if evo.modelScale then
@@ -137,11 +144,9 @@ hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflict
         local currentLevel = ply:GetNWInt("PetLevel_" .. petID, 1)
         local currentXP = ply:GetNWInt("PetXP_" .. petID, 0) + 1
         
-        -- Mevcut evrim verisini al
         local stage = HLRPG_GetPetEvolutionStage(petID, currentLevel)
         local evo = HLRPG.PetData[petID].Evolutions[stage]
         
-        -- Level atlama kontrolü
         local reqXP = evo.xpRequired + ((currentLevel - stage) * evo.xpIncreasePerLevel)
 
         print("Pet XP: " .. currentXP .. " / " .. reqXP)
@@ -152,7 +157,8 @@ hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflict
             ply:SetNWInt("PetLevel_" .. petID, newLevel)
             ply:SetNWInt("PetXP_" .. petID, 0)
 
-            -- EVRİM KONTROLÜ
+            ply:SavePetProgress(petID, newLevel, 0)
+
             local nextStage = HLRPG_GetPetEvolutionStage(petID, newLevel)
             if nextStage != stage then
                 ply:ChatPrint("✨ PETİN EVRİMLEŞTİ: " .. HLRPG.PetData[petID].Evolutions[nextStage].name)
@@ -170,12 +176,11 @@ hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflict
                 end
                 
                 ply:ChatPrint("🎉 Pet Seviye Atladı: " .. newLevel)
-                
-                -- LEVEL UP EFEKTİ (Daha sonra ekleyeceğimiz efekt için hazır)
-                HLRPG_PlayLevelUpEffect(attacker) 
             end
         else
             ply:SetNWInt("PetXP_" .. petID, currentXP)
+
+            ply:SavePetProgress(petID, currentLevel, currentXP)
         end
     end
 end)
@@ -186,11 +191,9 @@ net.Receive("HLRPG_UpdatePetCustomization", function(len, ply)
     local col = net.ReadColor()
     local colVec = Vector(col.r / 255, col.g / 255, col.b / 255)
 
-    -- Veriyi oyuncunun üzerine mühürle (Oturum boyunca kalır)
-    ply:SetNWString("HLRPG_CustomName_" .. petID, name)
-    ply:SetNWVector("HLRPG_CustomColorVec_" .. petID, colVec)
+    ply:SetPData("PetName_" .. petID, name)
+    ply:SetPData("PetColor_" .. petID, util.TableToJSON({col.r, col.g, col.b}))
 
-    -- Sahadaki peti güncelle
     local pet = ply.CurrentRPGPet
     if IsValid(pet) and pet.PetID == petID then
         pet:SetNWString("HLRPG_PetEntityName", name)

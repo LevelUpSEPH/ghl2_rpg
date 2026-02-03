@@ -18,6 +18,7 @@ function HLRPG_Inventory_EquipRequest(ply, itemID)
         if ply.HLRPG_Suit == itemID or ply.HLRPG_Model == itemData.model then
             ply.HLRPG_Suit = "none"
             ply:SetNWString("HLRPG_ActiveSuit", "")
+            ply:SaveSuit()
             model = ply:GetNWString("HLRPG_ActiveModel", "models/player/kleiner.mdl")
             ply:SetModel(model)
             net.Start("HLRPG_Sync_Suit")
@@ -26,14 +27,21 @@ function HLRPG_Inventory_EquipRequest(ply, itemID)
             net.Broadcast()
             ply:ChatPrint("[INV] Zırh/Karakter çıkarıldı.")
         else
+            if group == "Suits" then
+                ply.HLRPG_Suit = itemID
+                ply:SetNWString("HLRPG_ActiveSuit", itemID)
+                ply:SaveSuit()
+            end
             HLRPG_ApplyEquipment(ply, (group == "Suits" and "suit" or "model"), itemID)
         end
 
     elseif group == "Hats" then
         if ply.HLRPG_ActiveHat == itemID then
             HLRPG_ApplyHat(ply, "none")
+            ply:SaveHat()
         else
             HLRPG_ApplyHat(ply, itemID)
+            ply:SaveHat()
         end
 
     elseif itemData.type == "modifier" then
@@ -89,14 +97,18 @@ end
 function HLRPG_GiveItem(ply, itemID, reason)
     if not IsValid(ply) or not itemID then return false end
     
-    if ply:GetNWBool("HLRPG_Owned_" .. itemID, false) then return false end
+    local inv = ply:GetInventory()
+    if inv[itemID] then return false end
 
+    inv[itemID] = true
+    ply.HLRPG_Inventory = inv
+    ply:SaveInventory()
+    
     ply:SetNWBool("HLRPG_Owned_" .. itemID, true)
     
     local itemData = HLRPG_Assets[itemID]
     local itemName = itemData and itemData.name or itemID
-    
-    ply:ChatPrint("[INVENTORY] Yeni eşya eklendi: " .. itemName .. " (" .. (reason or "Sistem") .. ")")
+    ply:ChatPrint("[INVENTORY] Yeni eşya: " .. itemName .. " (" .. (reason or "Sistem") .. ")")
     
     return true
 end
@@ -114,7 +126,6 @@ net.Receive("HLRPG_HubAction", function(len, ply)
     local id = net.ReadString()
     
     if action == "equip" then
-        -- Senin yukarıda paylaştığın fonksiyonu tetikler
         HLRPG_Inventory_EquipRequest(ply, id)
     end
 end)

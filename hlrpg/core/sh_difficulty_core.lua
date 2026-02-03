@@ -45,7 +45,6 @@ function HLRPG_CalculateStat(baseValue, statType, npcLevel)
     elseif statType == "DMG" then
         return baseValue * (1 + (diffMult * 0.1)) * (1 + (npcLevel * 0.01))
     elseif statType == "XP" then
-        -- XP için kendi çarpanını (xpMult) kullanıyoruz
         return baseValue * diffData.xpMult * (1 + (npcLevel * 0.05))
     end
     
@@ -56,6 +55,5 @@ function HLRPG_GetRequiredXP(lvl)
     if HLRPG_LevelConfig[lvl] then
         return HLRPG_LevelConfig[lvl]
     end
-    -- Tabloda yoksa: Son kayıtlı level + (level başına 5000 artış)
     return 10000 + ((lvl - 10) * 5000)
 end

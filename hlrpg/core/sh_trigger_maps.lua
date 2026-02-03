@@ -7,9 +7,18 @@ HLRPG.AchievementTriggerMap = {
     ["lcs_CupCop_Fail"] = "HL2_DEFIANT",
     ["relay_knockout_alyxrescue"] = "HL2_MALCONTENT",
     ["kill_mtport_rl_1"] = "HL2_WHAT_CAT",
-    ["relay_found_HEVplate"] = "HL2_VORTIGAL_ENERGY",
+    ["relay_found_HEVplate"] = "HL2_BLAST_FROM_PAST",
     ["crowbar_weapon"] = "HL2_TRUSTY_HARDWARE",
     ["sand_trap_trigger"] = "HL2_KEEP_OFF_SAND", -- d2_coast_11_relay_expanse_spawn_1 fail
+    ["lcs_airboat_01"] = "HL2_ANCHORS_AWEIGH",
+    ["lcs_guncave_gategreet2"] = "HL2_HEAVY_WEAPONS",
+    ["relay_achievement_vort_sighting_1"] = "HL2_VORTICOUGH",
+    ["relay_achievement_heli_1"] = "HL2_REVENGE",
+    ["lcs_gravgun01"] = "HL2_ZERO_POINT_ENERGY",
+    ["lcs_al_niceshot"] = "HL2_TWO_POINTS",
+    ["graveyard_monk_scene_b2"] = "HL2_HALLOWED_GROUND",
+    
+
 }
 
 HLRPG.LambdaMap = {
