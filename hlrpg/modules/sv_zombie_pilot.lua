@@ -87,14 +87,12 @@ hook.Add("Think", "HLRPG_ZombiePilot_Logic", function()
                 local pos = npc:GetPos()
                 local ang = npc:GetAngles()
 
-                -- 1. BAĞLANTIYI KES (Ölmemek için kritik)
                 npc.IsPilotEntity = false
                 npc.OwnerPly = nil
                 ply.IsZombieForm = false
                 ply.CanBurstRevive = false
                 ply:SetNWBool("HLRPG_InZombieForm", false)
 
-                -- 2. PARÇALARI SPAWN ET (Ragdoll & Headcrab)
                 local gibs = {
                     "models/zombie/classic_torso.mdl",
                     "models/zombie/classic_legs.mdl"
@@ -108,17 +106,14 @@ hook.Add("Think", "HLRPG_ZombiePilot_Logic", function()
                     gib:Spawn()
                     gib:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
                     
-                    -- Parçaları rastgele bir kuvvetle fırlat
                     local phys = gib:GetPhysicsObject()
                     if IsValid(phys) then
                         phys:ApplyForceCenter(VectorRand() * 500 + Vector(0,0,300))
                     end
                     
-                    -- 10 saniye sonra temizle
                     SafeRemoveEntityDelayed(gib, 10)
                 end
 
-                -- 4. ZOMBİYİ SİL VE OYUNCUYU GETİR
                 npc:Remove()
                 
                 ply:SetNoDraw(false)
@@ -128,7 +123,6 @@ hook.Add("Think", "HLRPG_ZombiePilot_Logic", function()
                 ply:SetSaveValue("m_takedamage", 2)
                 ply:SetHealth(100)
 
-                -- Ses ve Kan Efekti
                 ply:EmitSound("physics/flesh/flesh_bloody_break.wav", 100, 80)
                 local ed = EffectData()
                 ed:SetOrigin(pos + Vector(0,0,40))
@@ -139,8 +133,8 @@ hook.Add("Think", "HLRPG_ZombiePilot_Logic", function()
             end
             if ply:KeyPressed(IN_DUCK) then
                 local d = DamageInfo()
-                d:SetDamage(1000) -- Çok yüksek hasar
-                d:SetDamageType(DMG_BLAST) -- Patlama hasarı parçalanmayı (gib) tetikler
+                d:SetDamage(1000)
+                d:SetDamageType(DMG_BLAST)
                 npc:TakeDamageInfo(d)
             end
             ply:SetPos(npc:GetPos() + Vector(0,0,60))
@@ -185,9 +179,8 @@ end)
 
 hook.Add("PlayerBindPress", "HLRPG_Zombie_NoWeaponChange", function(ply, bind, pressed)
     if ply:GetNWBool("HLRPG_InZombieForm") then
-        -- Silah slotları (1-6), Mouse Wheel (invnext/prev) engelle
         if string.find(bind, "slot") or string.find(bind, "invprev") or string.find(bind, "invnext") or string.find(bind, "lastinv") then
-            return true -- Bind'ı tamamen iptal et
+            return true
         end
     end
 end)

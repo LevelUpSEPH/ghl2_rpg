@@ -9,15 +9,12 @@ function HLRPG_AwardAchievement(ply, achID)
     local ach = HLRPG.Achievements[achID]
     if not ach then return end
 
-    -- 1. BAŞARIMI SUNUCUDA İŞLE (Persistence/Kayıt için burası asıl kaynaktır)
     ply.UnlockedAchievements = ply.UnlockedAchievements or {}
     
-    -- Eğer zaten açılmışsa fonksiyondan çık
     if ply.UnlockedAchievements[achID] then return end
     
     ply.UnlockedAchievements[achID] = true
 
-    -- 2. RPG SİSTEMİNE XP AKTAR
     if ach.xp and ach.xp > 0 then
         HLRPG_AddXP(ply, ach.xp)
     end
@@ -26,7 +23,6 @@ function HLRPG_AwardAchievement(ply, achID)
         HLRPG_GiveItem(ply, ach.rewardItem, "Başarım: " .. ach.name)
     end
 
-    -- 3. HEMEN HUD BİLDİRİMİ GÖNDER
     net.Start("HLRPG_AchievementNotify")
         net.WriteString(achID)
         net.WriteString(ach.name)
@@ -64,7 +60,6 @@ function HLRPG_AwardLambda(ply, lambdaID)
     ply:SaveLambdas()
 end
 
--- 4. MENÜ İSTEĞİNİ KARŞILA (Sadece sunucudaki güncel tabloyu gönderir)
 hook.Add("PlayerSay", "HLRPG_AchievementChatCommand", function(ply, text)
     local cmd = string.lower(text)
     if cmd == "!achievement" or cmd == "!ach" then

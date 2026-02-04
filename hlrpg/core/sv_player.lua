@@ -10,12 +10,12 @@ hook.Add("PlayerInitialSpawn", "HLRPG_InitialLoad", function(ply)
         
         if ply.InitialRPGSetup then
             ply:InitialRPGSetup()
-            timer.Remove("HLRPG_InitTimer_" .. ply:UserID()) -- Başarılı, timer'ı durdur
+            timer.Remove("HLRPG_InitTimer_" .. ply:UserID())
             
             local level = ply.HLRPG_Level or 1
-            ply:ChatPrint(">>> Hoş geldin, " .. ply:Nick() .. "! Veriler yüklendi. (Seviye: " .. level .. ")")
+            ply:ChatPrint(">>> Welcome!, " .. ply:Nick() .. " Join our discord at : https://discord.gg/d588UVcpzD <<<")
         else
-            print("[HLRPG] Database bekleniyor... " .. ply:Nick())
+            print("[HLRPG] Waiting on db response... " .. ply:Nick())
         end
     end)
 end)

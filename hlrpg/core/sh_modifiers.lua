@@ -3,9 +3,6 @@
 HLRPG = HLRPG or {}
 HLRPG.Modifiers = {}
 
--- MODIFIER TANIMLARI
--- Her modifier'ın hooklarda nasıl davranacağını burada belirleriz.
-
 local DEF = {}
 
 DEF["mod_fire_ammo"] = {

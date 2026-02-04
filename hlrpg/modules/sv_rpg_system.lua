@@ -78,13 +78,3 @@ hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
         end
     end
 end)
-
--- ==========================================
--- 3. KAYIT SİSTEMİ (LAMBDA INTEGRATION)
--- ==========================================
-
-if engine.ActiveGamemode() == "lambda" then
-    hook.Add("LambdaOnPlayerSave", "HLRPG_SaveData", function(ply, data)
-        
-    end)
-end

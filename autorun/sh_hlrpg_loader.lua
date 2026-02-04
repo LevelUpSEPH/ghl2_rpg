@@ -6,7 +6,7 @@ HLRPG = HLRPG or {}
 HLRPG.Version = "1.0.0"
 HLRPG.Authors = "Ege SEFERTAS"
 
-print("\n>>> [HALF LIFE RPG] Sistem Yukleniyor... <<<")
+print("\n>>> [HALF LIFE RPG] Loading Systems... <<<")
 
 -- Yükleyici Fonksiyon
 local function LoadFile(path)
@@ -22,18 +22,12 @@ local function LoadFile(path)
     print("[HLRPG] Yuklendi: " .. path)
 end
 
--- ==============================
--- MODÜL YÜKLEME LİSTESİ (YENİ KLASÖR ADIYLA)
--- ==============================
-
--- 1. Config
 LoadFile("hlrpg/config/sh_config.lua")
 LoadFile("hlrpg/core/sh_npc_names.lua")
 LoadFile("hlrpg/core/sh_difficulty_core.lua")
 LoadFile("hlrpg/core/sh_xp_config.lua")
 LoadFile("hlrpg/core/sh_nocombat_maps.lua")
 
--- 2. Core Sistemler
 LoadFile("hlrpg/core/sv_database.lua")
 LoadFile("hlrpg/core/sv_player.lua")
 LoadFile("hlrpg/core/sh_modifiers.lua")
@@ -100,4 +94,4 @@ LoadFile("hlrpg/core/sh_central_assets.lua")
 LoadFile("hlrpg/core/sh_hat_effects.lua")
 LoadFile("hlrpg/core/sh_pets.lua")
 
-print(">>> [HALF LIFE RPG] Hazir! <<<\n")
+print(">>> [HALF LIFE RPG] All Modules Loaded! <<<\n")

@@ -36,7 +36,6 @@ net.Receive("HLRPG_Shop_Purchase", function(len, ply)
             ply:SetNWInt("HLRPG_XP", newXP)
         end
 
-        -- ENVANTERE EKLE VE KAYDET
         inv[itemID] = true
         ply.HLRPG_Inventory = inv
         ply:SaveInventory()

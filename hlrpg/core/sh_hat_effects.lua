@@ -6,7 +6,6 @@ HLRPG.HatEffects.Definitions = {}
 HLRPG.HatEffects.Definitions["wireframe"] = {
     Name = "Combine Tactical Interface",
     
-    -- 1. Renk ve Kontrast (Post-Processing)
     OnRender = function()
         DrawColorModify({
             ["$pp_colour_addr"] = 0,
@@ -18,21 +17,18 @@ HLRPG.HatEffects.Definitions["wireframe"] = {
         })
     end,
 
-    -- 2. Scanlines ve HUD Arayüzü
     OnUI = function()
-        surface.SetDrawColor(0, 0, 0, 80) -- Siyah, yarı saydam çizgiler
+        surface.SetDrawColor(0, 0, 0, 80)
         local w, h = ScrW(), ScrH()
-        local lineSpacing = 3 -- Çizgi aralığı
+        local lineSpacing = 3
         
         for i = 0, h, lineSpacing do
             surface.DrawRect(0, i, w, 1)
         end
 
-        -- İsteğe bağlı: Köşelere küçük "REC" veya "SYNC" yazısı
         draw.SimpleText("• SYSTEM ONLINE", "DermaDefault", 20, 20, Color(0, 200, 255, 150))
     end,
 
-    -- 3. ESP (Mavi Silüetler)
     OnDraw = function()
         local targets = ents.FindByClass("npc_combine_s")
         table.Add(targets, ents.FindByClass("npc_metropolice"))

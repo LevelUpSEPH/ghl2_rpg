@@ -8,17 +8,12 @@ hook.Add("EntityTakeDamage", "HLRPG_Combat_Master", function(target, dmginfo)
     local attacker = dmginfo:GetAttacker()
     local inflictor = dmginfo:GetInflictor()
 
-    ---------------------------------------------------------
-    -- 1. KRİTİK KORUMALAR (Dost Ateşi & Güvenlik)
-    ---------------------------------------------------------
     if IsValid(attacker) and attacker:IsPlayer() then
-        -- PvP Engelleme
         if target:IsPlayer() and target != attacker then
             dmginfo:SetDamage(0)
             return true
         end
 
-        -- Dost NPC Engelleme (Kleiner, Barney, Citizen vb.)
         local friendlyNPCs = { 
             ["npc_kleiner"] = true, ["npc_barney"] = true, ["npc_citizen"] = true, 
             ["npc_alyx"] = true, ["npc_dog"] = true, ["npc_vortigaunt"] = true,
@@ -30,9 +25,6 @@ hook.Add("EntityTakeDamage", "HLRPG_Combat_Master", function(target, dmginfo)
         end
     end
 
-    ---------------------------------------------------------
-    -- 2. NPC & BOSS SCALING (Düşman Güçlendirme)
-    ---------------------------------------------------------
     if IsValid(attacker) and attacker:IsNPC() then
         local npcLevel = attacker:GetNWInt("HLRPG_NPCLevel", 1)
         
@@ -47,25 +39,19 @@ hook.Add("EntityTakeDamage", "HLRPG_Combat_Master", function(target, dmginfo)
         end
     end
 
-    ---------------------------------------------------------
-    -- 3. PET SİSTEMİ (Hasar & HP Senkronizasyonu)
-    ---------------------------------------------------------
-    -- Pet saldırıyorsa
     if attacker.IsHLRPGPet and IsValid(attacker.OwnerPly) then
         local stats = attacker.CurrentStats
         if stats then
             local finalScale = stats.dmgMultiplier + ((stats.level - 1) * 0.1)
             dmginfo:ScaleDamage(finalScale)
         end
-        
-        -- Pet sahibine veya sahibinin dostlarına vuramaz
+
         if target:IsPlayer() or (target:IsNPC() and target:Disposition(attacker.OwnerPly) == D_LI) then
             dmginfo:SetDamage(0)
             return true
         end
     end
 
-    -- Pet hasar alıyorsa
     if target.IsHLRPGPet and IsValid(target.OwnerPly) then
         if attacker:IsPlayer() or (attacker:IsNPC() and attacker:Disposition(target.OwnerPly) == D_LI) then
             dmginfo:SetDamage(0)
@@ -80,9 +66,6 @@ hook.Add("EntityTakeDamage", "HLRPG_Combat_Master", function(target, dmginfo)
         end)
     end
 
-    ---------------------------------------------------------
-    -- 4. PLAYER MODIFIERS (Hat & Weapon Modları)
-    ---------------------------------------------------------
     if IsValid(attacker) and attacker:IsPlayer() then
         local wep = attacker:GetActiveWeapon()
         local wepClass = IsValid(wep) and wep:GetClass() or nil
@@ -96,18 +79,12 @@ hook.Add("EntityTakeDamage", "HLRPG_Combat_Master", function(target, dmginfo)
         end
     end
 
-    ---------------------------------------------------------
-    -- 5. XP TRACKING (Hasar Tablosu)
-    ---------------------------------------------------------
     if target:IsNPC() and IsValid(attacker) and attacker:IsPlayer() then
         target.HLRPG_DamageTable = target.HLRPG_DamageTable or {}
         local actualDmg = math.min(dmginfo:GetDamage(), target:Health())
         target.HLRPG_DamageTable[attacker] = (target.HLRPG_DamageTable[attacker] or 0) + actualDmg
     end
 
-    ---------------------------------------------------------
-    -- 6. DEATH PREVENTION (Zombi Pilot vb. Özellikler)
-    ---------------------------------------------------------
     if target:IsPlayer() and not target.IsZombieForm then
         local currentHealth = target:Health()
         local incomingDamage = dmginfo:GetDamage()

@@ -1,7 +1,6 @@
 -- addons/halflife_rpg/lua/hlrpg/config/sh_npc_names.lua
 
 HLRPG_NPC_Configs = {
-    -- [Class] = { İsim, Renk (isteğe bağlı) }
     ["npc_combine_s"] = { "Combine Soldier", Color(200, 200, 255) },
     ["npc_combine_e"] = { "Combine Elite", Color(255, 100, 100) },
     ["npc_metropolice"] = { "Civil Protection", Color(150, 200, 255) },
@@ -27,7 +26,6 @@ HLRPG_NPC_Configs = {
     ["npc_monk"] = { "Father Grigori", Color(200, 200, 150) },
 }
 
--- Yardımcı Fonksiyonlar
 function HLRPG_GetNPCName(ent)
     if not IsValid(ent) then return "Unknown" end
     local class = ent:GetClass()

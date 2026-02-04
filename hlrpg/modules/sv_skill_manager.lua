@@ -31,8 +31,3 @@ function meta:CastSkill(skillID)
         self.HLRPG_Cooldowns[skillID] = CurTime() + cd
     end
 end
-
-concommand.Add("rpg_cast", function(ply, cmd, args)
-    local skillID = args[1]
-    if skillID then ply:CastSkill(skillID) end
-end)

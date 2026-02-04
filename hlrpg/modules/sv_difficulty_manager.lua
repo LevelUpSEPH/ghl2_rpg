@@ -1,8 +1,6 @@
 -- addons/halflife_rpg/lua/hlrpg/modules/sv_difficulty_manager.lua
 if not SERVER then return end
 
--- addons/halflife_rpg/lua/hlrpg/modules/sv_difficulty_manager.lua
-
 function HLRPG_SetDifficulty(level)
     level = math.Clamp(tonumber(level) or 1, 1, table.Count(HLRPG_DifficultyScales))
     SetGlobalInt("HLRPG_CurrentDifficulty", level)
