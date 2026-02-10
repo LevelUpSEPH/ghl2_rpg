@@ -43,9 +43,9 @@ net.Receive("HLRPG_Shop_Purchase", function(len, ply)
         ply:SetNWBool("HLRPG_Owned_" .. itemID, true)
 
         ply:EmitSound("items/suitchargeok1.wav")
-        ply:ChatPrint("[SHOP] Başarıyla satın alındı: " .. itemData.name)
+        ply:ChatPrint("[SHOP] Successfully purchased: " .. itemData.name)
     else
-        ply:ChatPrint("[SHOP] Yetersiz bakiye!")
+        ply:ChatPrint("[SHOP] Insufficient balance!")
         ply:EmitSound("buttons/button11.wav")
     end
 end)

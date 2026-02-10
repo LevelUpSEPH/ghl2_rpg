@@ -31,10 +31,8 @@ local function SetHandsDirectly(ply)
         
         hands:SetRenderMode(RENDERMODE_NORMAL)
         hands:SetColor(Color(255, 255, 255, 255))
-        
-        print("[HLRPG] Eller Zorla Degistirildi: " .. suitData.hands)
     else
-        print("[HLRPG] HATA: Oyuncunun el entity'si bulunamadı!")
+        
     end
 end
 
@@ -46,15 +44,13 @@ end)
 
 function HLRPG_ApplyEquipment(ply, type, value)
     if not IsValid(ply) then return end
-    
-    print("[HLRPG] Equip Islemi Baslatildi: Type=" .. type .. ", Value=" .. value)
 
     if type == "model" then
         ply:SetModel(value)
         ply.HLRPG_Model = value
         ply:SetNWString("HLRPG_ActiveModel", value)
         ply:SetupHands() 
-        ply:ChatPrint("Kıyafet değişti.")
+        ply:ChatPrint("Clothing changed.")
 
     elseif type == "suit" then
         local suitData = nil
@@ -64,7 +60,7 @@ function HLRPG_ApplyEquipment(ply, type, value)
         
         if suitData then
             ply.HLRPG_Suit = value
-            ply:ChatPrint("Zırh Kuşandın: " .. suitData.name)
+            ply:ChatPrint("Equipped suit: " .. suitData.name)
             ply:SetNWString("HLRPG_ActiveSuit", value)
             net.Start("HLRPG_Sync_Suit")
                 net.WriteEntity(ply)
@@ -75,7 +71,7 @@ function HLRPG_ApplyEquipment(ply, type, value)
                 if IsValid(ply) then SetHandsDirectly(ply) end
             end)
         else
-            print("[HLRPG] HATA: Suit verisi bulunamadi: " .. value)
+            
         end
     end
 end
@@ -98,7 +94,6 @@ hook.Add("PlayerSetHands", "HLRPG_Hook_SetHands", function(ply, ent)
     if suitData and suitData.hands then
         ent:SetModel(suitData.hands)
         if suitData.skin then ent:SetSkin(suitData.skin) end
-        print("[HLRPG] Hook Tetiklendi!")
         return true
     end
 end)

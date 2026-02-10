@@ -1,8 +1,6 @@
 -- hlrpg/modules/sv_combat_master.lua
 if not SERVER then return end
 
-print("[HLRPG] Master Combat System Yükleniyor...")
-
 hook.Add("EntityTakeDamage", "HLRPG_Combat_Master", function(target, dmginfo)
     if not IsValid(target) then return end
     local attacker = dmginfo:GetAttacker()
@@ -103,10 +101,8 @@ hook.Add("EntityTakeDamage", "HLRPG_Combat_Master", function(target, dmginfo)
                 end)
 
                 if not success then
-                    print("[HLRPG ERROR] OnDeathPrevention Hatası: ", err)
                     target:Kill() 
                 else
-                    print("[HLRPG] OnDeathPrevention başarıyla çalıştırıldı.")
                     target:SetSaveValue("m_takedamage", 0)
                 end
                 return true

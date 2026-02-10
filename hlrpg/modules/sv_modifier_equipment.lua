@@ -13,7 +13,7 @@ function HLRPG_ApplyModifier(ply, modID, modVal, scope)
 
     ply:SetNWBool("HLRPG_ModActive_" .. modID, true)
 
-    ply:ChatPrint(string.format("[MOD] %s aktif edildi (%s)", modDef.Name, targetScope))
+    ply:ChatPrint(string.format("[MOD] %s activated (%s)", modDef.Name, targetScope))
     ply:EmitSound("buttons/button9.wav", 70, 150)
 end
 
@@ -21,5 +21,5 @@ function HLRPG_RemoveModifier(ply, modID)
     if not IsValid(ply) then return end
     ply:RemoveRPGModifier(modID, "Global")
     ply:SetNWBool("HLRPG_ModActive_" .. modID, false)
-    ply:ChatPrint("[MOD] Yetenek devredisi.")
+    ply:ChatPrint("[MOD] Deactivated Mod.")
 end

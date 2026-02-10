@@ -134,7 +134,7 @@ hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflict
 
             local nextStage = HLRPG_GetPetEvolutionStage(petID, newLevel)
             if nextStage != stage then
-                ply:ChatPrint("✨ PETİN EVRİMLEŞTİ: " .. HLRPG.PetData[petID].Evolutions[nextStage].name)
+                ply:ChatPrint("✨ YOUR PET EVOLVED!: " .. HLRPG.PetData[petID].Evolutions[nextStage].name)
                 HLRPG_SummonPet(ply, petID)
                 return 
             else
@@ -148,7 +148,7 @@ hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflict
                     attacker:SetNWString("HLRPG_PetEntityName", newStats.name)
                 end
                 
-                ply:ChatPrint("🎉 Pet Seviye Atladı: " .. newLevel)
+                ply:ChatPrint("🎉 Pet Level Up: " .. newLevel)
             end
         else
             ply:SetNWInt("PetXP_" .. petID, currentXP)

@@ -26,7 +26,7 @@ local function PerformLevelUp(ply)
         ply:SetHealth(newMax)
 
         ply:EmitSound("ambient/levels/citadel/weapon_disintegrate2.wav", 100, 120)
-        ply:ChatPrint(">>> SEVİYE ATLADIN: " .. newLevel .. " <<<")
+        ply:ChatPrint(">>> LEVEL UP: " .. newLevel .. " <<<")
     end
 
     ply:SetNWInt("HLRPG_MaxXP", HLRPG_GetRequiredXP(ply.HLRPG_Level))

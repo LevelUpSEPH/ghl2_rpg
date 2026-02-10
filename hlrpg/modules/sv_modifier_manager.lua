@@ -100,7 +100,7 @@ concommand.Add("rpg_add", function(ply, cmd, args)
     if not modID then return end
     
     ply:AddRPGModifier(modID, val, scope)
-    ply:ChatPrint("Eklendi: " .. modID)
+    ply:ChatPrint("Added: " .. modID)
 end)
 
 concommand.Add("rpg_rem", function(ply, cmd, args)
@@ -110,14 +110,14 @@ concommand.Add("rpg_rem", function(ply, cmd, args)
     if not modID then return end
     
     local success = ply:RemoveRPGModifier(modID, scope)
-    if success then ply:ChatPrint("Silindi: " .. modID) else ply:ChatPrint("Bulunamadı.") end
+    if success then ply:ChatPrint("Removed: " .. modID) else ply:ChatPrint("Not found.") end
 end)
 
 concommand.Add("rpg_status", function(ply)
     if not IsValid(ply) then return end
     local wep = ply:GetActiveWeapon()
-    local cls = IsValid(wep) and wep:GetClass() or "Yok"
-    ply:ChatPrint("--- DURUM: " .. cls .. " ---")
+    local cls = IsValid(wep) and wep:GetClass() or "None"
+    ply:ChatPrint("--- STATUS: " .. cls .. " ---")
     local mods = ply:GetCalculatedModifiers(cls)
     for k, v in pairs(mods) do ply:ChatPrint(k .. " = " .. tostring(v)) end
 end)

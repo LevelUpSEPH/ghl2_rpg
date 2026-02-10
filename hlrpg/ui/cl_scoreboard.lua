@@ -19,11 +19,11 @@ local function CreateScoreboard()
         -- Dünya Zorluk Durumu
         local diffLevel = GetGlobalInt("HLRPG_CurrentDifficulty", 1)
         local diffName = (HLRPG_DifficultyScales and HLRPG_DifficultyScales[diffLevel]) and HLRPG_DifficultyScales[diffLevel].name or "NORMAL"
-        draw.SimpleText("Zorluk: " .. diffName, "DermaDefault", 22, 50, Color(200, 200, 200), TEXT_ALIGN_LEFT)
+        draw.SimpleText("Difficulty: " .. diffName, "DermaDefault", 22, 50, Color(200, 200, 200), TEXT_ALIGN_LEFT)
         
         -- Sütun Başlıkları
-        draw.SimpleText("OYUNCU", "DermaDefaultBold", 80, 90, Color(150, 150, 150))
-        draw.SimpleText("SEVİYE", "DermaDefaultBold", 350, 90, Color(150, 150, 150))
+        draw.SimpleText("PLAYER", "DermaDefaultBold", 80, 90, Color(150, 150, 150))
+        draw.SimpleText("LEVEL", "DermaDefaultBold", 350, 90, Color(150, 150, 150))
         draw.SimpleText("XP (WALLET / GOAL)", "DermaDefaultBold", 450, 90, Color(150, 150, 150))
         draw.SimpleText("TEMP POINTS", "DermaDefaultBold", 680, 90, Color(0, 255, 255))
         draw.SimpleText("PING", "DermaDefaultBold", 880, 90, Color(150, 150, 150))

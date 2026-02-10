@@ -32,7 +32,7 @@ hook.Add("AcceptInput", "HLRPG_Achievement_Bridge", function(ent, input, activat
         return
     end
 
-    print("[HLRPG] ACH Denemesi: " .. name)
+    -- print("[HLRPG] Trying for ACH: " .. name)
 
     local achID = HLRPG.AchievementTriggerMap[name]
     if achID then

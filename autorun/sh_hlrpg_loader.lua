@@ -19,8 +19,9 @@ local function LoadFile(path)
         if SERVER then AddCSLuaFile(path) end
         include(path)
     end
-    print("[HLRPG] Yuklendi: " .. path)
 end
+
+LoadFile("hlrpg/modules/sv_resources.lua")
 
 LoadFile("hlrpg/config/sh_config.lua")
 LoadFile("hlrpg/core/sh_npc_names.lua")
@@ -85,6 +86,8 @@ LoadFile("hlrpg/core/sh_trigger_maps.lua")
 LoadFile("hlrpg/modules/sv_achievement_core.lua")
 LoadFile("hlrpg/modules/sv_achievement_logic.lua")
 LoadFile("hlrpg/modules/cl_announcer.lua")
+
+LoadFile("hlrpg/modules/sv_map_restart_manager.lua")
 
 LoadFile("hlrpg/modules/custom_achievement_listeners/sv_barnacle_bowling.lua")
 

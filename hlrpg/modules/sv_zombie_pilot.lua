@@ -129,7 +129,6 @@ hook.Add("Think", "HLRPG_ZombiePilot_Logic", function()
                 util.Effect("AntlionGib", ed)
                 
                 ply:ViewPunch(Angle(-15, 0, 0))
-                ply:ChatPrint("[BURST] Zombi parçalandı, ruhun serbest!")
             end
             if ply:KeyPressed(IN_DUCK) then
                 local d = DamageInfo()
@@ -150,7 +149,6 @@ hook.Add("PostEntityTakeDamage", "HLRPG_ZombieDeath_Sync", function(ent, dmg, to
             ply.IsZombieForm = false 
             ply:SetNWBool("HLRPG_InZombieForm", false)
             ply:Kill() 
-            ply:ChatPrint("[CRITICAL] Neural link severed. Ghost host destroyed.")
             ply:EmitSound("npc/zombie/zombie_die1.wav")
         end
     end
@@ -161,7 +159,7 @@ hook.Add("OnNPCKilled", "HLRPG_ZombieRevive_Grant", function(victim, attacker, i
         local ply = attacker.OwnerPly
         
         ply.CanBurstRevive = true
-        ply:ChatPrint("[SOUL REAPED] Patlamak için [SPACE] tuşuna bas!")
+        ply:ChatPrint("[SOUL REAPED] Press [SPACE] to burst out!")
     end
 end)
 

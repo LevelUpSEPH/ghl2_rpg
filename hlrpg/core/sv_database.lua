@@ -3,7 +3,7 @@
 local meta = FindMetaTable("Player")
 
 if not meta then
-    ErrorNoHalt("[HLRPG] KRITIK HATA: Player Metatable bulunamadi!\n")
+    ErrorNoHalt("[HLRPG] Hard Fault! Player save load failed\n")
     return
 end
 
@@ -176,5 +176,5 @@ function meta:InitialRPGSetup()
         self:SetNWInt("HLRPG_MaxXP", HLRPG_GetRequiredXP(self.HLRPG_Level))
     end
     
-    print("[HLRPG] " .. self:Nick() .. " için tüm veriler başarıyla yüklendi.")
+    print("[HLRPG] " .. self:Nick() .. " data loaded.")
 end
