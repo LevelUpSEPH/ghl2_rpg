@@ -1,7 +1,6 @@
--- addons/halflife_rpg/lua/hlrpg/modules/cl_killfeed_cleaner.lua
-if not CLIENT then return end
+-- hlrpg/ui/cl_killfeed_cleaner.lua
+-- Hides the top-right kill feed.
 
--- Sağ üstteki ölüm bildirimlerini tamamen engelle
 hook.Add("DrawDeathNotice", "HLRPG_HideKillFeed", function()
     return false
 end)

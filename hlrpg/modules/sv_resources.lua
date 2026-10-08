@@ -1,3 +1,5 @@
-if SERVER then
-    resource.AddWorkshop("780244493") -- Sadece tırnak içinde ID
+-- hlrpg/modules/sv_resources.lua
+
+for _, workshopID in ipairs(HLRPG.Config.WorkshopContent) do
+    resource.AddWorkshop(workshopID)
 end

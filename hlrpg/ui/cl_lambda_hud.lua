@@ -1,4 +1,5 @@
--- cl_lambda_hud.lua
+-- hlrpg/ui/cl_lambda_hud.lua
+-- "Lambda found" popup on the left side of the screen.
 local lambda_draw_queue = {}
 local L_PANEL_W, L_PANEL_H = 280, 50
 local L_DISPLAY_TIME = 6

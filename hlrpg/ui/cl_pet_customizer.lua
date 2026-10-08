@@ -1,23 +1,25 @@
--- cl_pet_customizer.lua
-function HLRPG_OpenPetCustomizer(petID)
+-- hlrpg/ui/cl_pet_customizer.lua
+-- Name/color editor for an owned pet, opened from the Player Hub inventory.
+
+function HLRPG.OpenPetCustomizer(petID)
     local frame = vgui.Create("DFrame")
     frame:SetSize(300, 400)
-    frame:SetTitle("Pet Özelleştirme")
+    frame:SetTitle("Pet Customization")
     frame:Center()
     frame:MakePopup()
 
     local label = vgui.Create("DLabel", frame)
-    label:SetText("Pet İsmi:")
+    label:SetText("Pet Name:")
     label:Dock(TOP)
     label:DockMargin(10, 10, 10, 0)
 
     local nameEntry = vgui.Create("DTextEntry", frame)
     nameEntry:Dock(TOP)
     nameEntry:DockMargin(10, 5, 10, 10)
-    nameEntry:SetText(LocalPlayer():GetPData("HLRPG_PetName_" .. petID, "Pet"))
+    nameEntry:SetText(LocalPlayer():GetNWString("HLRPG_CustomName_" .. petID, "Pet"))
 
     local colorLabel = vgui.Create("DLabel", frame)
-    colorLabel:SetText("Pet Rengi:")
+    colorLabel:SetText("Pet Color:")
     colorLabel:Dock(TOP)
     colorLabel:DockMargin(10, 10, 10, 0)
 
@@ -28,20 +30,17 @@ function HLRPG_OpenPetCustomizer(petID)
     colorMixer:SetWangs(true)
 
     local saveBtn = vgui.Create("DButton", frame)
-    saveBtn:SetText("KAYDET VE UYGULA")
+    saveBtn:SetText("SAVE & APPLY")
     saveBtn:Dock(BOTTOM)
     saveBtn:DockMargin(10, 10, 10, 10)
     saveBtn:SetHeight(40)
     saveBtn.DoClick = function()
-        local newName = nameEntry:GetValue()
-        local newColor = colorMixer:GetColor()
-        
         net.Start("HLRPG_UpdatePetCustomization")
             net.WriteString(petID)
-            net.WriteString(newName)
-            net.WriteColor(newColor)
+            net.WriteString(nameEntry:GetValue())
+            net.WriteColor(colorMixer:GetColor())
         net.SendToServer()
-        
+
         frame:Close()
     end
 end

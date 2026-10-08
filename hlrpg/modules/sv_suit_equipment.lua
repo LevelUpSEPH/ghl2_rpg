@@ -1,0 +1,117 @@
+-- hlrpg/modules/sv_suit_equipment.lua
+-- Suits (drawn client-side over the player via bonemerge, see cl_suit_visuals.lua) and base player models.
+
+util.AddNetworkString("HLRPG_OpenMenu")
+util.AddNetworkString("HLRPG_SetPlayerModel")
+util.AddNetworkString("HLRPG_Sync_Suit")
+
+local function GetSuit(suitID)
+    local asset = HLRPG.Assets[suitID]
+    return (asset and asset.group == "Suits") and asset or nil
+end
+
+-- Sends ply's suit to target, or to everyone if target is nil
+local function SendSuit(ply, target)
+    net.Start("HLRPG_Sync_Suit")
+        net.WriteEntity(ply)
+        net.WriteString(ply.HLRPG_Suit or "none")
+    if target then net.Send(target) else net.Broadcast() end
+end
+
+local function ApplySuitHands(ply)
+    ply:SetupHands()
+
+    local suit = GetSuit(ply.HLRPG_Suit)
+    local hands = ply:GetHands()
+    if not suit or not suit.hands or not IsValid(hands) then return end
+
+    hands:SetModel(suit.hands)
+    if suit.skin then hands:SetSkin(suit.skin) end
+    hands:SetRenderMode(RENDERMODE_NORMAL)
+    hands:SetColor(Color(255, 255, 255, 255))
+end
+
+-- suitID "none" removes the current suit
+function HLRPG.ApplySuit(ply, suitID)
+    if not IsValid(ply) then return end
+
+    local suit = GetSuit(suitID)
+    if not suit and suitID ~= "none" then return end
+
+    local oldSuitID = ply.HLRPG_Suit or "none"
+    ply.HLRPG_Suit = suitID
+    ply:SetNWString("HLRPG_ActiveSuit", suitID)
+    SendSuit(ply)
+    HLRPG.OnEquipmentChanged(ply, oldSuitID, suitID)
+
+    ply:ChatPrint(suit and ("Equipped suit: " .. suit.name) or "[INV] Suit removed.")
+
+    timer.Simple(0.1, function()
+        if IsValid(ply) then ApplySuitHands(ply) end
+    end)
+end
+
+function HLRPG.ToggleSuit(ply, suitID)
+    HLRPG.ApplySuit(ply, ply.HLRPG_Suit == suitID and "none" or suitID)
+    ply:SaveSuit()
+end
+
+function HLRPG.SetPlayerModel(ply, model)
+    ply.HLRPG_Model = model
+    ply:SetModel(model)
+    ply:SetupHands()
+    ply:ChatPrint("Clothing changed.")
+end
+
+hook.Add("ShowHelp", "HLRPG_Override_F1", function(ply)
+    net.Start("HLRPG_OpenMenu")
+    net.Send(ply)
+    return false
+end)
+
+-- Only models listed in HLRPG.Config.Models are accepted from clients
+net.Receive("HLRPG_SetPlayerModel", function(len, ply)
+    local model = net.ReadString()
+
+    for _, entry in ipairs(HLRPG.Config.Models) do
+        if entry.model == model then
+            HLRPG.SetPlayerModel(ply, model)
+            return
+        end
+    end
+end)
+
+hook.Add("PlayerSetHands", "HLRPG_Hook_SetHands", function(ply, ent)
+    local suit = GetSuit(ply.HLRPG_Suit)
+    if not suit or not suit.hands then return end
+
+    ent:SetModel(suit.hands)
+    if suit.skin then ent:SetSkin(suit.skin) end
+    return true
+end)
+
+hook.Add("PlayerSpawn", "HLRPG_Spawn_Hands", function(ply)
+    timer.Simple(0.2, function()
+        if not IsValid(ply) then return end
+
+        if ply.HLRPG_Model then ply:SetModel(ply.HLRPG_Model) end
+
+        if ply.HLRPG_Suit then
+            SendSuit(ply)
+            ApplySuitHands(ply)
+        end
+    end)
+end)
+
+-- Late joiners need everyone else's suits
+hook.Add("PlayerInitialSpawn", "HLRPG_Sync_Suits", function(newPly)
+    timer.Simple(5, function()
+        if not IsValid(newPly) then return end
+
+        for _, ply in ipairs(player.GetAll()) do
+            if ply ~= newPly and GetSuit(ply.HLRPG_Suit) then
+                SendSuit(ply, newPly)
+            end
+        end
+    end)
+end)

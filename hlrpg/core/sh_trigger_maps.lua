@@ -1,6 +1,5 @@
 -- hlrpg/core/sh_trigger_maps.lua
-
-HLRPG = HLRPG or {}
+-- Map entity name -> achievement ID. Fired from the AcceptInput bridge in sv_achievements.lua.
 
 HLRPG.AchievementTriggerMap = {
     ["lcs_CupCop_Pass"] = "HL2_SUBMISSIVE",
@@ -17,10 +16,9 @@ HLRPG.AchievementTriggerMap = {
     ["lcs_gravgun01"] = "HL2_ZERO_POINT_ENERGY",
     ["lcs_al_niceshot"] = "HL2_TWO_POINTS",
     ["graveyard_monk_scene_b2"] = "HL2_HALLOWED_GROUND",
-    
-
 }
 
+-- "<map>_<entity name>" -> lambda cache ID
 HLRPG.LambdaMap = {
     ["d1_trainstation_05_lcs_alyxgreet04"] = "L1",
     ["d1_canals_01_relay_achievement_cache_1"] = "L2",

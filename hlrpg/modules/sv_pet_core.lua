@@ -1,17 +1,13 @@
--- addons/halflife_rpg/lua/hlrpg/modules/sv_pet_core.lua
-if not SERVER then return end
+-- hlrpg/modules/sv_pet_core.lua
+-- Pet spawning, leveling/evolution and customization.
 
 util.AddNetworkString("HLRPG_UpdatePetCustomization")
 
-local function GetEvoData(petID, stage)
-    return HLRPG.PetData[petID] and HLRPG.PetData[petID].Evolutions[stage]
-end
+local MAX_PET_NAME_LENGTH = 32
 
-function HLRPG_GetPetStats(ply, petID)
+function HLRPG.GetPetStats(ply, petID)
     local level = ply:GetNWInt("PetLevel_" .. petID, 1)
-    local stage = HLRPG_GetPetEvolutionStage(petID, level)
-    local evo = HLRPG.PetData[petID].Evolutions[stage]
-    
+    local evo, stage = HLRPG.GetPetEvolution(petID, level)
     if not evo then return nil end
 
     return {
@@ -21,67 +17,63 @@ function HLRPG_GetPetStats(ply, petID)
         dmgMultiplier = evo.dmgMultiplier,
         level = level,
         stage = stage,
-        reqXP = HLRPG_GetPlayerPetRequiredXP(ply, petID)
+        reqXP = HLRPG.GetPetRequiredXP(petID, level)
     }
 end
 
-function HLRPG_SummonPet(ply, petID)
-    if IsSafeMap() then
-        ply:ChatPrint("[PET] Bu haritada evcil hayvan çağırmak yasak!")
-        return 
-    end
+function HLRPG.SummonPet(ply, petID)
     if not IsValid(ply) or petID == "none" then return end
-    
-    local stats = HLRPG_GetPetStats(ply, petID)
+
+    if HLRPG.IsSafeMap() then
+        ply:ChatPrint("[PET] Pets can't be summoned on this map!")
+        return
+    end
+
+    local stats = HLRPG.GetPetStats(ply, petID)
     if not stats then return end
 
-    if IsValid(ply.CurrentRPGPet) then 
-        ply.CurrentRPGPet:Remove() 
+    if IsValid(ply.CurrentRPGPet) then
+        ply.CurrentRPGPet:Remove()
     end
-    local pData = HLRPG.PetData[petID]
-    local evo = pData.Evolutions[stats.stage]
+
+    local evo = HLRPG.PetData[petID].Evolutions[stats.stage]
     local pet = ents.Create(stats.class)
     if not IsValid(pet) then return end
-    
-    local savedName = ply:GetPData("PetName_" .. petID) or stats.name
-    local rawCol = ply:GetPData("PetColor_" .. petID)
 
-    pet:SetNWString("HLRPG_PetEntityName", savedName)
-    local savedColorVec = Vector(1, 1, 1)
-    if rawCol then
-        local colTable = util.JSONToTable(rawCol)
-        if colTable and #colTable >= 3 then
-            savedColorVec = Vector(colTable[1] / 255, colTable[2] / 255, colTable[3] / 255)
-        end
-    end
-    pet:SetNWVector("HLRPG_CustomColor", savedColorVec)
+    local customName, customColor = ply:GetPetCustomization(petID)
+    local colorVec = customColor or Vector(1, 1, 1)
+
+    pet:SetNWString("HLRPG_PetEntityName", customName or stats.name)
+    pet:SetNWVector("HLRPG_CustomColor", colorVec)
 
     if evo.modelScale then
         pet:SetModelScale(evo.modelScale, 0)
     end
 
     if evo.weapon then
-        print("Equipping pet with weapon: " .. evo.weapon)
         pet:SetKeyValue("additionalequipment", evo.weapon)
-        pet:SetKeyValue("NumGrenades", "5") 
+        pet:SetKeyValue("NumGrenades", "5")
     end
 
     local spawnPos = ply:GetPos() + ply:GetForward() * 50 + Vector(0, 0, 20)
     pet:SetPos(spawnPos)
     pet:SetAngles(Angle(0, ply:GetAngles().y, 0))
-    
+
     pet.IsHLRPGPet = true
     pet.OwnerPly = ply
     pet.PetID = petID
     pet.CurrentStats = stats
 
     pet:SetNWInt("HLRPG_PetEntityLevel", stats.level)
+    pet:SetNWEntity("HLRPG_PetOwner", ply)
 
     pet:SetKeyValue("squadname", "")
     pet:SetKeyValue("spawnflags", "256")
-    
+
     pet:Spawn()
     pet:Activate()
+
+    if evo.OnSpawn then evo.OnSpawn(pet) end
 
     if evo.weapon and pet:IsNPC() then
         pet:CapabilitiesAdd(CAP_WEAPON_RANGE_ATTACK1)
@@ -89,19 +81,13 @@ function HLRPG_SummonPet(ply, petID)
 
     pet:SetMaxHealth(stats.maxHealth)
     pet:SetHealth(stats.maxHealth)
-
-    pet:SetColor(Color(savedColorVec.x * 255, savedColorVec.y * 255, savedColorVec.z * 255))
+    pet:SetColor(Color(colorVec.x * 255, colorVec.y * 255, colorVec.z * 255))
 
     ply.CurrentRPGPet = pet
     ply:SetNWEntity("HLRPG_ActivePetEntity", pet)
-
     pet:SetNWBool("HLRPG_ISPET", true)
 
-    if HLRPG_SetupPetRelationships then
-        HLRPG_SetupPetRelationships(pet, ply)
-    else
-        pet:AddRelationship("player D_LI 99")
-    end
+    HLRPG.SetupPetRelationships(pet, ply)
 
     ply:EmitSound("ambient/levels/citadel/weapon_disintegrate2.wav", 70, 140)
     local effectData = EffectData()
@@ -109,68 +95,66 @@ function HLRPG_SummonPet(ply, petID)
     util.Effect("EntityDissolve", effectData)
 end
 
-hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflictor)
-    if IsValid(attacker) and attacker.IsHLRPGPet then
-        local ply = attacker.OwnerPly
-        local petID = attacker.PetID
-        
-        local currentLevel = ply:GetNWInt("PetLevel_" .. petID, 1)
-        local currentXP = ply:GetNWInt("PetXP_" .. petID, 0) + 1
-        
-        local stage = HLRPG_GetPetEvolutionStage(petID, currentLevel)
-        local evo = HLRPG.PetData[petID].Evolutions[stage]
-        
-        local reqXP = evo.xpRequired + ((currentLevel - stage) * evo.xpIncreasePerLevel)
+-- Adds XP to one of ply's pets, leveling it up (possibly several times) and evolving it as needed.
+-- The pet doesn't need to be summoned; if it is, its stats update in place.
+function HLRPG.AddPetXP(ply, petID, amount)
+    local level = ply:GetNWInt("PetLevel_" .. petID, 1)
+    local xp = ply:GetNWInt("PetXP_" .. petID, 0) + amount
+    local startStage = HLRPG.GetPetEvolutionStage(petID, level)
 
-        print("Pet XP: " .. currentXP .. " / " .. reqXP)
-        
-        if currentXP >= reqXP then
-            currentXP = 0
-            local newLevel = currentLevel + 1
-            ply:SetNWInt("PetLevel_" .. petID, newLevel)
-            ply:SetNWInt("PetXP_" .. petID, 0)
-
-            ply:SavePetProgress(petID, newLevel, 0)
-
-            local nextStage = HLRPG_GetPetEvolutionStage(petID, newLevel)
-            if nextStage != stage then
-                ply:ChatPrint("✨ YOUR PET EVOLVED!: " .. HLRPG.PetData[petID].Evolutions[nextStage].name)
-                HLRPG_SummonPet(ply, petID)
-                return 
-            else
-                local newStats = HLRPG_GetPetStats(ply, petID)
-                if newStats then
-                    attacker:SetMaxHealth(newStats.maxHealth)
-                    attacker:SetHealth(newStats.maxHealth)
-                    attacker.CurrentStats = newStats
-                    
-                    attacker:SetNWInt("HLRPG_PetEntityLevel", newLevel)
-                    attacker:SetNWString("HLRPG_PetEntityName", newStats.name)
-                end
-                
-                ply:ChatPrint("🎉 Pet Level Up: " .. newLevel)
-            end
-        else
-            ply:SetNWInt("PetXP_" .. petID, currentXP)
-
-            ply:SavePetProgress(petID, currentLevel, currentXP)
-        end
+    local startLevel = level
+    while xp >= HLRPG.GetPetRequiredXP(petID, level) do
+        xp = xp - HLRPG.GetPetRequiredXP(petID, level)
+        level = level + 1
     end
+
+    ply:SetNWInt("PetLevel_" .. petID, level)
+    ply:SetNWInt("PetXP_" .. petID, xp)
+    ply:SavePetProgress(petID, level, xp)
+
+    if level == startLevel then return end
+
+    local pet = ply.CurrentRPGPet
+    local isSummoned = IsValid(pet) and pet.PetID == petID
+
+    local newEvo, newStage = HLRPG.GetPetEvolution(petID, level)
+    if newStage ~= startStage then
+        ply:ChatPrint("✨ YOUR PET EVOLVED!: " .. newEvo.name)
+        if isSummoned then HLRPG.SummonPet(ply, petID) end
+        return
+    end
+
+    local newStats = isSummoned and HLRPG.GetPetStats(ply, petID)
+    if newStats then
+        pet:SetMaxHealth(newStats.maxHealth)
+        pet:SetHealth(newStats.maxHealth)
+        pet.CurrentStats = newStats
+        pet:SetNWInt("HLRPG_PetEntityLevel", level)
+    end
+
+    ply:ChatPrint("🎉 Pet Level Up: " .. level)
+end
+
+-- Pets gain 1 XP per kill
+hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflictor)
+    if not IsValid(attacker) or not attacker.IsHLRPGPet or not IsValid(attacker.OwnerPly) then return end
+
+    HLRPG.AddPetXP(attacker.OwnerPly, attacker.PetID, 1)
 end)
 
 net.Receive("HLRPG_UpdatePetCustomization", function(len, ply)
     local petID = net.ReadString()
-    local name = net.ReadString()
+    local name = string.sub(net.ReadString(), 1, MAX_PET_NAME_LENGTH)
     local col = net.ReadColor()
-    local colVec = Vector(col.r / 255, col.g / 255, col.b / 255)
 
-    ply:SetPData("PetName_" .. petID, name)
-    ply:SetPData("PetColor_" .. petID, util.TableToJSON({col.r, col.g, col.b}))
+    if not HLRPG.PetData[petID] or not ply:OwnsItem(petID) then return end
+
+    ply:SavePetCustomization(petID, name, col)
 
     local pet = ply.CurrentRPGPet
     if IsValid(pet) and pet.PetID == petID then
         pet:SetNWString("HLRPG_PetEntityName", name)
-        pet:SetNWVector("HLRPG_CustomColor", colVec)
+        pet:SetNWVector("HLRPG_CustomColor", Vector(col.r / 255, col.g / 255, col.b / 255))
         pet:SetRenderMode(RENDERMODE_TRANSCOLOR)
         pet:SetColor(col)
     end

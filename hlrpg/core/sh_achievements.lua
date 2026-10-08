@@ -1,4 +1,6 @@
--- sh_achievements.lua
+-- hlrpg/core/sh_achievements.lua
+-- isGlobal: everyone on the server gets it when it triggers. Triggers live in sh_trigger_maps.lua.
+
 HLRPG.Achievements = {
     ["HL2_DEFIANT"] = {
         name = "Defiant",
@@ -12,7 +14,6 @@ HLRPG.Achievements = {
         name = "Submissive",
         desc = "Good boy",
         xp = 250,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_submissive.png",
         isGlobal = true
     },
@@ -20,7 +21,6 @@ HLRPG.Achievements = {
         name = "Malcontent",
         desc = "Close call",
         xp = 300,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_malcontent.png",
         isGlobal = true
     },
@@ -28,7 +28,6 @@ HLRPG.Achievements = {
         name = "What Cat?",
         desc = "Good job, electrician",
         xp = 300,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_what_cat.png",
         isGlobal = true
     },
@@ -36,14 +35,12 @@ HLRPG.Achievements = {
         name = "Trusty Hardware",
         desc = "Right hand man achieved",
         xp = 300,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_trusty_hardware.png"
     },
     ["HL2_BARNACLE_BOWLING"] = {
         name = "Barnacle Bowling",
         desc = "Use barnacles to your advantage",
         xp = 300,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_barnacle_bowling.png",
         isGlobal = true
     },
@@ -58,7 +55,6 @@ HLRPG.Achievements = {
         name = "Keep Off The Sand",
         desc = "Avoid the sand traps",
         xp = 3000,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_keep_off_sand.png",
         isGlobal = true,
         isReversed = true
@@ -67,7 +63,6 @@ HLRPG.Achievements = {
         name = "Lambda Locator",
         desc = "Find all lambda caches",
         xp = 25000,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_lambda_locator.png",
         isGlobal = false
     },
@@ -75,7 +70,6 @@ HLRPG.Achievements = {
         name = "Anchors Aweigh",
         desc = "Ride the boat",
         xp = 300,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_anchors_aweigh.png",
         isGlobal = true
     },
@@ -83,7 +77,6 @@ HLRPG.Achievements = {
         name = "Heavy Weapons",
         desc = "Get the mounted gun",
         xp = 300,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_heavy_weapons.png",
         isGlobal = true
     },
@@ -91,7 +84,6 @@ HLRPG.Achievements = {
         name = "Revenge",
         desc = "Defeat the Chopper",
         xp = 2000,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_revenge.png",
         isGlobal = true
     },
@@ -99,7 +91,6 @@ HLRPG.Achievements = {
         name = "Zero Point Energy",
         desc = "Gravity gun acquired",
         xp = 500,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_zero_point_energy.png",
         isGlobal = true
     },
@@ -107,7 +98,6 @@ HLRPG.Achievements = {
         name = "Blast From The Past",
         desc = "Use the old HEV suit charger",
         xp = 400,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_blast_from_past.png",
         isGlobal = true
     },
@@ -115,7 +105,6 @@ HLRPG.Achievements = {
         name = "Two Points",
         desc = "Score a basket with the rollermine",
         xp = 600,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_two_points.png",
         isGlobal = true
     },
@@ -123,7 +112,6 @@ HLRPG.Achievements = {
         name = "Hallowed Ground",
         desc = "Reach the graveyard",
         xp = 500,
-        rewardItem = nil,
         icon = "resources/icons/achievements/hl2_hallowed_ground.png",
         isGlobal = true
     },
