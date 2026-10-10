@@ -1,18 +1,31 @@
 -- hlrpg/ui/cl_scoreboard.lua
 -- TAB menu: player list with progression, plus a navigation bar to every HLRPG page.
 
-local BOARD_W, BOARD_H = 950, 650
 local ACCENT = Color(255, 180, 0)
 local HEADER_TEXT = Color(150, 150, 150)
 
--- Each page closes the scoreboard and opens on its own, so it stays open after TAB is released
+-- Navigation: equal-sized tiles, NAV_PER_ROW per row; a shorter last row is centered.
+-- Each page closes the scoreboard and opens on its own, so it stays open after TAB is released.
 local NAV_PAGES = {
-    { label = "SHOP & INVENTORY", icon = "icon16/cart.png",       open = function() HLRPG.OpenPlayerHub() end },
-    { label = "ACHIEVEMENTS",     icon = "icon16/award_star_gold_1.png", open = function() HLRPG.RequestMenu("achievements") end },
-    { label = "LAMBDA CACHES",    icon = "icon16/map.png",        open = function() HLRPG.RequestMenu("lambdas") end },
-    { label = "DIFFICULTY",       icon = "icon16/chart_bar.png",  open = function() HLRPG.OpenDifficultyMenu() end },
-    { label = "CHARACTER",        icon = "icon16/user_suit.png",  open = function() HLRPG.OpenModelMenu() end },
+    { label = "SHOP",         icon = "icon16/cart.png",              open = function() HLRPG.OpenPlayerHub() end },
+    { label = "CHARACTER",    icon = "icon16/user_suit.png",         open = function() HLRPG.OpenModelMenu() end },
+    { label = "ACHIEVEMENTS", icon = "icon16/award_star_gold_1.png", open = function() HLRPG.RequestMenu("achievements") end },
+    { label = "LAMBDAS",      icon = "icon16/map.png",               open = function() HLRPG.RequestMenu("lambdas") end },
+    { label = "VOTE",         icon = "icon16/thumb_up.png",          open = function() HLRPG.OpenVoteMenu() end },
+    { label = "VEHICLE",      icon = "icon16/car.png",               open = function() HLRPG.RequestMenu("vehicle") end },
+    { label = "DIFFICULTY",   icon = "icon16/chart_bar.png",         open = function() HLRPG.OpenDifficultyMenu() end },
 }
+
+-- Layout
+local NAV_PER_ROW, NAV_TILE_H, NAV_GAP = 4, 50, 6
+local NAV_ROWS = math.ceil(#NAV_PAGES / NAV_PER_ROW)
+local NAV_Y = 82
+local NAV_BOTTOM = NAV_Y + NAV_ROWS * NAV_TILE_H + (NAV_ROWS - 1) * NAV_GAP
+local HEADER_Y = NAV_BOTTOM + 16
+local LINE_Y = HEADER_Y + 18
+local LIST_Y = LINE_Y + 8
+local BOARD_W = 950
+local BOARD_H = LIST_Y + 500
 
 -- Column x positions, shared by the headers and the rows
 local COL = { name = 60, level = 330, xp = 410, ach = 640, lambda = 745, tp = 815, ping = 885 }
@@ -29,37 +42,49 @@ local function AddLabel(parent, text, x, y, font, color)
     return label
 end
 
-local function CreateNavBar(parent)
-    local bar = vgui.Create("DPanel", parent)
-    bar:SetPos(20, 78)
-    bar:SetSize(BOARD_W - 40, 34)
-    bar.Paint = nil
+local function CreateNavTile(board, page)
+    local btn = vgui.Create("DButton", board)
+    btn:SetText("")
+    local icon = Material(page.icon)
 
-    local spacing = 8
-    local btnW = (bar:GetWide() - spacing * (#NAV_PAGES - 1)) / #NAV_PAGES
+    btn.Paint = function(s, w, h)
+        local hovered = s:IsHovered()
+
+        draw.RoundedBox(4, 0, 0, w, h, hovered and Color(255, 150, 0, 35) or Color(45, 45, 45, 255))
+        surface.SetDrawColor(hovered and ACCENT or Color(70, 70, 70, 255))
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+        surface.SetDrawColor(255, 255, 255)
+        surface.SetMaterial(icon)
+        surface.DrawTexturedRect(w / 2 - 8, 9, 16, 16)
+
+        draw.SimpleText(page.label, "DermaDefaultBold", w / 2, h - 14, hovered and ACCENT or color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+
+    btn.DoClick = function()
+        surface.PlaySound("ui/buttonclick.wav")
+        board:Hide()
+        page.open()
+    end
+
+    return btn
+end
+
+local function CreateNavBar(board)
+    local tileW = (BOARD_W - 40 - NAV_GAP * (NAV_PER_ROW - 1)) / NAV_PER_ROW
 
     for i, page in ipairs(NAV_PAGES) do
-        local btn = vgui.Create("DButton", bar)
-        btn:SetPos((i - 1) * (btnW + spacing), 0)
-        btn:SetSize(btnW, 34)
-        btn:SetText("")
-        local icon = Material(page.icon)
+        local row = math.floor((i - 1) / NAV_PER_ROW)
+        local col = (i - 1) % NAV_PER_ROW
 
-        btn.Paint = function(s, w, h)
-            draw.RoundedBox(4, 0, 0, w, h, s:IsHovered() and Color(255, 150, 0) or Color(55, 55, 55, 255))
+        -- Center the row: full rows span the width, a shorter last row is offset by its missing tiles
+        local tilesInRow = math.min(NAV_PER_ROW, #NAV_PAGES - row * NAV_PER_ROW)
+        local rowW = tilesInRow * tileW + (tilesInRow - 1) * NAV_GAP
+        local rowX = (BOARD_W - rowW) / 2
 
-            surface.SetDrawColor(255, 255, 255)
-            surface.SetMaterial(icon)
-            surface.DrawTexturedRect(10, h / 2 - 8, 16, 16)
-
-            draw.SimpleText(page.label, "DermaDefaultBold", w / 2 + 8, h / 2, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        end
-
-        btn.DoClick = function()
-            surface.PlaySound("ui/buttonclick.wav")
-            parent:Hide()
-            page.open()
-        end
+        local tile = CreateNavTile(board, page)
+        tile:SetPos(rowX + col * (tileW + NAV_GAP), NAV_Y + row * (NAV_TILE_H + NAV_GAP))
+        tile:SetSize(tileW, NAV_TILE_H)
     end
 end
 
@@ -131,26 +156,25 @@ local function CreateScoreboard()
         draw.SimpleText(game.GetMap(), "DermaDefaultBold", w - 20, 18, Color(200, 200, 200), TEXT_ALIGN_RIGHT)
         draw.SimpleText(player.GetCount() .. " / " .. game.MaxPlayers() .. " players", "DermaDefault", w - 20, 40, Color(160, 160, 160), TEXT_ALIGN_RIGHT)
 
-        local headerY = 124
-        draw.SimpleText("PLAYER", "DermaDefaultBold", 20 + COL.name, headerY, HEADER_TEXT)
-        draw.SimpleText("LEVEL", "DermaDefaultBold", 20 + COL.level, headerY, HEADER_TEXT)
-        draw.SimpleText("XP (WALLET / GOAL)", "DermaDefaultBold", 20 + COL.xp, headerY, HEADER_TEXT)
-        draw.SimpleText("ACHIEVEMENTS", "DermaDefaultBold", 20 + COL.ach, headerY, Color(102, 192, 244))
-        draw.SimpleText("λ CACHES", "DermaDefaultBold", 20 + COL.lambda, headerY, Color(255, 160, 0))
-        draw.SimpleText("TP", "DermaDefaultBold", 20 + COL.tp, headerY, Color(0, 255, 255))
-        draw.SimpleText("PING", "DermaDefaultBold", 20 + COL.ping, headerY, HEADER_TEXT)
+        draw.SimpleText("PLAYER", "DermaDefaultBold", 20 + COL.name, HEADER_Y, HEADER_TEXT)
+        draw.SimpleText("LEVEL", "DermaDefaultBold", 20 + COL.level, HEADER_Y, HEADER_TEXT)
+        draw.SimpleText("XP (WALLET / GOAL)", "DermaDefaultBold", 20 + COL.xp, HEADER_Y, HEADER_TEXT)
+        draw.SimpleText("ACHIEVEMENTS", "DermaDefaultBold", 20 + COL.ach, HEADER_Y, Color(102, 192, 244))
+        draw.SimpleText("λ CACHES", "DermaDefaultBold", 20 + COL.lambda, HEADER_Y, Color(255, 160, 0))
+        draw.SimpleText("TP", "DermaDefaultBold", 20 + COL.tp, HEADER_Y, Color(0, 255, 255))
+        draw.SimpleText("PING", "DermaDefaultBold", 20 + COL.ping, HEADER_Y, HEADER_TEXT)
 
         surface.SetDrawColor(100, 100, 100, 100)
-        surface.DrawLine(20, 142, w - 20, 142)
+        surface.DrawLine(20, LINE_Y, w - 20, LINE_Y)
 
-        draw.SimpleText("F1: Character   |   Chat: !ach  !lambda  !diff  !petsummon", "DermaDefault", w / 2, h - 16, Color(120, 120, 120), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("F1: Character   |   Number keys: vote on a running poll   |   Chat: !ach  !lambda  !petsummon", "DermaDefault", w / 2, h - 16, Color(120, 120, 120), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     CreateNavBar(BoardPanel)
 
     local Scroll = vgui.Create("DScrollPanel", BoardPanel)
-    Scroll:SetPos(20, 150)
-    Scroll:SetSize(BOARD_W - 40, BOARD_H - 185)
+    Scroll:SetPos(20, LIST_Y)
+    Scroll:SetSize(BOARD_W - 40, BOARD_H - LIST_Y - 35)
 
     local players = player.GetAll()
     table.sort(players, function(a, b)

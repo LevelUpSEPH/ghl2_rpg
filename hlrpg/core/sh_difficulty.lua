@@ -10,15 +10,18 @@ HLRPG.DifficultyScales = {
     [5] = { name = "Insane",    minLvl = 35, maxLvl = 50, color = Color(150, 0, 150) }
 }
 
--- multiplier = base * growth ^ (level - 1)
+-- multiplier = (base + perLevel * (level - 1)) * growth ^ (level - 1)
+-- Player weapons don't get stronger with level, so HP growth is kept gentle (it directly sets how long fights
+-- take). DMG grows slightly faster than player max health (+10/level, sv_progression.lua), so high-level
+-- fights are short and dangerous rather than long.
 --   Level:  1     8     16    27    42    50
---   HP:     0.80  1.13  1.66  2.84  5.91  8.74
---   DMG:    1.08  1.20  1.35  1.59  1.99  2.24
+--   HP:     0.80  1.01  1.25  1.58  2.03  2.27
+--   DMG:    1.00  1.84  2.80  4.12  5.92  6.88
 --   XP:     1.00  1.61  2.76  5.81  16.0  27.5
 HLRPG.NPCLevelScaling = {
-    HP  = { base = 0.8,  growth = 1.05 },
-    DMG = { base = 1.08, growth = 1.015 },
-    XP  = { base = 1.0,  growth = 1.07 },
+    HP  = { base = 0.8, perLevel = 0.03, growth = 1.0 },
+    DMG = { base = 1.0, perLevel = 0.12, growth = 1.0 },
+    XP  = { base = 1.0, perLevel = 0,    growth = 1.07 },
 }
 
 -- Player levels are measured in kills of a standard enemy (ReferenceNPC in HLRPG.NPCXP) at the player's
@@ -41,7 +44,8 @@ end
 -- stat is "HP", "DMG" or "XP"
 function HLRPG.GetNPCLevelMultiplier(stat, npcLevel)
     local scaling = HLRPG.NPCLevelScaling[stat]
-    return scaling.base * scaling.growth ^ (math.max(npcLevel, 1) - 1)
+    local levels = math.max(npcLevel, 1) - 1
+    return (scaling.base + (scaling.perLevel or 0) * levels) * scaling.growth ^ levels
 end
 
 local requiredXPCache = {}

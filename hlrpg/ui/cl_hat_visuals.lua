@@ -21,10 +21,29 @@ net.Receive("HLRPG_Sync_Hat", function()
     end
 end)
 
-local function SetModelScale(ent, scale)
+-- scale is PAC3's "Size" (uniform), stretch its "Scale" (per axis)
+local function SetModelScale(ent, scale, stretch)
     local mat = Matrix()
-    mat:Scale(Vector(scale, scale, scale))
+    mat:Scale((stretch or Vector(1, 1, 1)) * scale)
     ent:EnableMatrix("RenderMultiply", mat)
+end
+
+-- Where the hat goes relative to the head bone. offset/angle use PAC3's convention (LocalToWorld), so
+-- values can be copied straight from the PAC3 editor. legacyPlacement hats were tuned with older math.
+local function GetHatTransform(asset, bonePos, boneAng)
+    local offset = asset.offset or Vector(0, 0, 0)
+    local angle = asset.angle or Angle(0, 0, 0)
+
+    if not asset.legacyPlacement then
+        return LocalToWorld(offset, angle, bonePos, boneAng)
+    end
+
+    local pos = bonePos + boneAng:Forward() * offset.x + boneAng:Right() * offset.y + boneAng:Up() * offset.z
+    local ang = Angle(boneAng)
+    ang:RotateAroundAxis(ang:Up(), angle.y)
+    ang:RotateAroundAxis(ang:Right(), angle.p)
+    ang:RotateAroundAxis(ang:Forward(), angle.r)
+    return pos, ang
 end
 
 hook.Add("PostPlayerDraw", "HLRPG_RenderHats", function(ply)
@@ -36,18 +55,11 @@ hook.Add("PostPlayerDraw", "HLRPG_RenderHats", function(ply)
     local matrix = bone and ply:GetBoneMatrix(bone)
     if not matrix then return end
 
-    local pos, ang = matrix:GetTranslation(), matrix:GetAngles()
-    local offset = data.Asset.offset or Vector(0, 0, 0)
-    local angle = data.Asset.angle or Angle(0, 0, 0)
+    local pos, ang = GetHatTransform(data.Asset, matrix:GetTranslation(), matrix:GetAngles())
 
-    local movePos = pos + ang:Forward() * offset.x + ang:Right() * offset.y + ang:Up() * offset.z
-    ang:RotateAroundAxis(ang:Up(), angle.y)
-    ang:RotateAroundAxis(ang:Right(), angle.p)
-    ang:RotateAroundAxis(ang:Forward(), angle.r)
+    SetModelScale(data.Ent, data.Asset.scale or 1.0, data.Asset.stretch)
 
-    SetModelScale(data.Ent, data.Asset.scale or 1.0)
-
-    data.Ent:SetRenderOrigin(movePos)
+    data.Ent:SetRenderOrigin(pos)
     data.Ent:SetRenderAngles(ang)
     data.Ent:DrawModel()
 end)

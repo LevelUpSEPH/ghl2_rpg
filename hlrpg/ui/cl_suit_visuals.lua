@@ -1,8 +1,8 @@
 -- hlrpg/ui/cl_suit_visuals.lua
 -- Suits are client-side models bonemerged onto the player. The real player model is made invisible
 -- and a second copy of it ("fake head") shows only the head and neck on top of the suit.
--- fullBody suits skip the fake head and draw their own head, which is what zombie models need:
--- their headcrab is part of the head, and their claws replace the hands.
+-- This only works for suit models built on the citizen body (rebels, medics, Combine); character
+-- playermodels like Breen or Kleiner have different proportions and weighting and won't line up.
 
 local INVISIBLE_MAT = "models/effects/vol_light001"
 local HIDDEN_SCALE = Vector(0.001, 0.001, 0.001)
@@ -57,14 +57,13 @@ local function CreateBonemerged(model, ply)
     return ent
 end
 
--- The suit model. Normal suits hide their head so the fake head shows the player's face instead;
--- fullBody suits (zombies) keep their own head and are drawn as-is.
+-- The suit model, with its head hidden so the fake head shows the player's face instead
 local function CreateSuitModel(ply, data, suitConfig)
     local suit = CreateBonemerged(suitConfig.model, ply)
     if not suit then return end
     suit:SetModelScale(1.01, 0)
 
-    local headBone = not suitConfig.fullBody and suit:LookupBone("ValveBiped.Bip01_Head1")
+    local headBone = suit:LookupBone("ValveBiped.Bip01_Head1")
     if headBone then
         suit:AddCallback("BuildBonePositions", function(ent)
             local m = IsValid(ent) and ent:GetBoneMatrix(headBone)
@@ -131,9 +130,7 @@ local function UpdatePlayerVisuals(ply, suitID)
     Visuals[sid] = data
 
     CreateSuitModel(ply, data, suitConfig)
-    if not suitConfig.fullBody then
-        CreateFakeHead(ply, data, suitConfig)
-    end
+    CreateFakeHead(ply, data, suitConfig)
 end
 
 net.Receive("HLRPG_Sync_Suit", function()

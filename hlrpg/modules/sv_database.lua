@@ -178,4 +178,5 @@ function meta:InitialRPGSetup()
     HLRPG.RefreshStats(self, true)
 
     print("[HLRPG] " .. self:Nick() .. " data loaded.")
+    hook.Run("HLRPG_PlayerDataLoaded", self)
 end

@@ -7,7 +7,6 @@ util.AddNetworkString("HLRPG_AchievementAnnounce")
 util.AddNetworkString("HLRPG_OpenAchievementMenu")
 util.AddNetworkString("HLRPG_LambdaNotify")
 util.AddNetworkString("HLRPG_OpenLambdaMenu")
-util.AddNetworkString("HLRPG_RequestMenu")
 
 function HLRPG.AwardAchievement(ply, achID)
     if not IsValid(ply) or not ply:IsPlayer() then return end
@@ -43,6 +42,16 @@ function HLRPG.AwardAchievement(ply, achID)
         net.WriteString(ach.name)
     net.Broadcast()
 end
+
+-- Gives rewards for achievements unlocked before their reward existed (or changed)
+hook.Add("HLRPG_PlayerDataLoaded", "HLRPG_MissingAchievementRewards", function(ply)
+    for achID in pairs(ply.UnlockedAchievements or {}) do
+        local ach = HLRPG.Achievements[achID]
+        if ach and ach.rewardItem and HLRPG.Assets[ach.rewardItem] and not ply:OwnsItem(ach.rewardItem) then
+            HLRPG.GiveItem(ply, ach.rewardItem, "Achievement: " .. ach.name)
+        end
+    end
+end)
 
 function HLRPG.AwardAchievementToAll(achID)
     for _, ply in ipairs(player.GetAll()) do
@@ -135,16 +144,6 @@ HLRPG.AddChatCommand("!achievement", OpenAchievementMenu)
 HLRPG.AddChatCommand("!ach", OpenAchievementMenu)
 HLRPG.AddChatCommand("!lambda", OpenLambdaMenu)
 
--- The TAB menu asks for these pages by name (see HLRPG.RequestMenu in sh_util.lua)
-local MENU_REQUESTS = {
-    achievements = OpenAchievementMenu,
-    lambdas = OpenLambdaMenu,
-}
-
-net.Receive("HLRPG_RequestMenu", function(len, ply)
-    if (ply.HLRPG_NextMenuRequest or 0) > CurTime() then return end
-    ply.HLRPG_NextMenuRequest = CurTime() + 0.5
-
-    local open = MENU_REQUESTS[net.ReadString()]
-    if open then open(ply) end
-end)
+-- Opened from the TAB menu with HLRPG.RequestMenu
+HLRPG.AddMenuRequest("achievements", OpenAchievementMenu)
+HLRPG.AddMenuRequest("lambdas", OpenLambdaMenu)

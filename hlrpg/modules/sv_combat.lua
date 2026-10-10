@@ -16,12 +16,15 @@ local function IsProtectedFromPlayer(target, attacker)
     return target:IsNPC() and HLRPG.FriendlyNPCs[target:GetClass()] == true
 end
 
+-- How much harder a leveled NPC hits (level, plus the boss bonus)
+function HLRPG.GetNPCDamageMultiplier(npc)
+    local mult = HLRPG.GetNPCLevelMultiplier("DMG", HLRPG.GetNPCLevel(npc))
+    if npc:GetNWBool("HLRPG_IsBoss") then mult = mult * HLRPG.BossDamageMultiplier end
+    return mult
+end
+
 local function ScaleNPCDamage(npc, dmginfo)
-    local scaled = dmginfo:GetDamage() * HLRPG.GetNPCLevelMultiplier("DMG", HLRPG.GetNPCLevel(npc))
-    if npc:GetNWBool("HLRPG_IsBoss") then
-        scaled = scaled * HLRPG.BossDamageMultiplier
-    end
-    dmginfo:SetDamage(scaled)
+    dmginfo:ScaleDamage(HLRPG.GetNPCDamageMultiplier(npc))
 end
 
 -- Scales pet damage by its stats. Returns true if the pet hit something on its owner's side.

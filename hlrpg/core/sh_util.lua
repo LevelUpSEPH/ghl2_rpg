@@ -5,7 +5,7 @@ function HLRPG.IsSafeMap()
 end
 
 if CLIENT then
-    -- Asks the server to open a page that needs server data ("achievements", "lambdas")
+    -- Asks the server to open a page that needs server data (see HLRPG.AddMenuRequest)
     function HLRPG.RequestMenu(name)
         net.Start("HLRPG_RequestMenu")
             net.WriteString(name)
@@ -29,5 +29,22 @@ if SERVER then
         table.remove(args, 1)
         callback(ply, args)
         return ""
+    end)
+
+    HLRPG.MenuRequests = HLRPG.MenuRequests or {}
+
+    -- Registers a page the client can open with HLRPG.RequestMenu(name). open(ply) sends it the data.
+    function HLRPG.AddMenuRequest(name, open)
+        HLRPG.MenuRequests[name] = open
+    end
+
+    util.AddNetworkString("HLRPG_RequestMenu")
+
+    net.Receive("HLRPG_RequestMenu", function(len, ply)
+        if (ply.HLRPG_NextMenuRequest or 0) > CurTime() then return end
+        ply.HLRPG_NextMenuRequest = CurTime() + 0.5
+
+        local open = HLRPG.MenuRequests[net.ReadString()]
+        if open then open(ply) end
     end)
 end

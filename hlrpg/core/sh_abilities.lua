@@ -8,11 +8,15 @@
 --   Describe(value)                         -> text for the shop / inventory
 --   Stats(ply, value, stats)                -> edit stats.maxHealth / stats.maxArmor (sv_abilities.lua)
 --   OnEquip(ply, value) / OnUnequip(ply, value)
+--   OnRefill(ply, value)                    -> health was fully restored (spawn, level up, join)
 --   Think(ply, value)                       -> once per second while alive
 --   OnFireBullets(ply, value, bulletData)   -> edit bulletData in place
 --   OnDealDamage(ply, value, target, dmginfo)
 --   OnTakeDamage(ply, value, attacker, dmginfo)
 --   OnLethalDamage(ply, value, dmginfo)     -> return true to survive the hit
+--   OnDeath(ply, value, attacker, inflictor)
+-- Shared (runs on the server and in the local player's prediction):
+--   StartCommand(ply, value, cmd)           -> edit the player's input before it's processed
 -- Client only, for the local player:
 --   RenderScreen(ply, value) / DrawHalos(ply, value) / HUDPaint(ply, value)
 
@@ -25,18 +29,6 @@ local REGEN_DELAY = 5
 
 local function CanRegen(ply)
     return CurTime() - (ply.HLRPG_LastDamaged or 0) >= REGEN_DELAY
-end
-
-local UNDEAD = {
-    ["npc_zombie"] = true, ["npc_zombie_torso"] = true,
-    ["npc_fastzombie"] = true, ["npc_fastzombie_torso"] = true,
-    ["npc_poisonzombie"] = true, ["npc_zombine"] = true,
-    ["npc_headcrab"] = true, ["npc_headcrab_fast"] = true, ["npc_headcrab_black"] = true,
-}
-
--- Wild undead only: headcrab pets and the piloted zombie are also these classes
-local function IsWildUndead(ent)
-    return ent:IsNPC() and UNDEAD[ent:GetClass()] and not ent.IsHLRPGPet and not ent.IsPilotEntity
 end
 
 -- Stats
@@ -63,10 +55,26 @@ DEF["health_regen"] = {
 DEF["armor_regen"] = {
     Describe = function(value) return "Regenerates " .. value .. " armor/s out of combat" end,
     Think = function(ply, value)
-        if CanRegen(ply) and ply:Armor() < ply:GetMaxArmor() then
+        if CanRegen(ply) and ply:Armor() < ply:GetMaxArmor() and not HLRPG.HasAbility(ply, "no_armor_regen") then
             ply:SetArmor(math.min(ply:GetMaxArmor(), ply:Armor() + value))
         end
     end
+}
+
+-- Overrides max health; hats come after suits, so a hat's value wins over suit health bonuses
+DEF["fixed_max_health"] = {
+    Describe = function(value) return "Max health is fixed at " .. value end,
+    Stats = function(ply, value, stats) stats.maxHealth = value end
+}
+
+DEF["armor_refill"] = {
+    Describe = function() return "Spawns with full armor" end,
+    OnRefill = function(ply) ply:SetArmor(ply:GetMaxArmor()) end
+}
+
+-- Marker checked by armor_regen; batteries and chargers still work
+DEF["no_armor_regen"] = {
+    Describe = function() return "Armor doesn't regenerate over time" end
 }
 
 -- Combat
@@ -98,32 +106,16 @@ DEF["lifesteal"] = {
     end
 }
 
--- Zombies leave the player alone until the player hurts one of them
-DEF["undead_disguise"] = {
-    Describe = function() return "Zombies and headcrabs ignore you until you attack them" end,
-    Think = function(ply)
-        for _, ent in ipairs(ents.FindInSphere(ply:GetPos(), 2000)) do
-            if IsWildUndead(ent) and not (ent.HLRPG_ProvokedBy and ent.HLRPG_ProvokedBy[ply]) then
-                ent:AddEntityRelationship(ply, D_NU, 99)
-                if ent:GetEnemy() == ply then
-                    ent:SetEnemy(NULL)
-                    ent:ClearEnemyMemory(ply)
-                end
-            end
-        end
-    end,
-    OnDealDamage = function(ply, value, target)
-        if not IsWildUndead(target) then return end
-        target.HLRPG_ProvokedBy = target.HLRPG_ProvokedBy or {}
-        target.HLRPG_ProvokedBy[ply] = true
-        target:AddEntityRelationship(ply, D_HT, 99)
-    end,
-    OnUnequip = function(ply)
-        for _, ent in ipairs(ents.GetAll()) do
-            if IsWildUndead(ent) then
-                ent:AddEntityRelationship(ply, D_HT, 99)
-            end
-        end
+-- Movement
+
+-- Holding jump keeps hopping. Jump is removed from the player's input while airborne, so holding it reads
+-- as a fresh press on the landing tick. This has to happen on the usercmd: stripping it from the move data
+-- instead leaves jump in the previous tick's buttons, the engine waits on the ground, and friction eats speed.
+DEF["auto_bhop"] = {
+    Describe = function() return "Hold jump to bunny hop" end,
+    StartCommand = function(ply, value, cmd)
+        if ply:OnGround() or ply:WaterLevel() >= 2 or ply:GetMoveType() ~= MOVETYPE_WALK then return end
+        cmd:RemoveKey(IN_JUMP)
     end
 }
 
@@ -145,6 +137,103 @@ DEF["pellet_multiplier"] = {
     OnFireBullets = function(ply, value, data)
         data.Num = math.floor(data.Num * value)
         data.Spread = data.Spread * 1.2
+    end
+}
+
+-- All damage drains armor before health, so the player can't die while armor is above 0
+DEF["armor_shield"] = {
+    Describe = function() return "Damage hits armor first; you can't die while you have armor" end,
+    OnTakeDamage = function(ply, value, attacker, dmginfo)
+        local armor, damage = ply:Armor(), dmginfo:GetDamage()
+        if armor <= 0 or damage <= 0 then return end
+
+        local absorbed = math.min(armor, damage)
+        ply:SetArmor(armor - absorbed)
+        dmginfo:SetDamage(damage - absorbed)
+    end
+}
+
+-- Melee attackers (claws, stunsticks, bites) take shock damage back
+local MELEE_DAMAGE = bit.bor(DMG_SLASH, DMG_CLUB)
+
+DEF["shock_attacker"] = {
+    Describe = function(value) return "Melee attackers take " .. value .. " shock damage" end,
+    OnTakeDamage = function(ply, value, attacker, dmginfo)
+        if not IsValid(attacker) or not attacker:IsNPC() then return end
+        if bit.band(dmginfo:GetDamageType(), MELEE_DAMAGE) == 0 then return end
+
+        local shock = DamageInfo()
+        shock:SetDamage(value)
+        shock:SetDamageType(DMG_SHOCK)
+        shock:SetAttacker(ply)
+        shock:SetInflictor(ply)
+        attacker:TakeDamageInfo(shock)
+
+        local effect = EffectData()
+        effect:SetEntity(attacker)
+        effect:SetMagnitude(2)
+        util.Effect("TeslaHitBoxes", effect)
+        attacker:EmitSound("ambient/energy/zap" .. math.random(1, 3) .. ".wav", 75, 110)
+    end
+}
+
+DEF["combine_ball_chance"] = {
+    Describe = function(value) return value .. "% chance per shot to also fire a Combine ball" end,
+    OnFireBullets = function(ply, value, data)
+        if math.random() * 100 >= value then return end
+
+        local dir = ply:GetAimVector()
+        local ball = ents.Create("prop_combine_ball")
+        if not IsValid(ball) then return end
+
+        ball:SetPos(ply:GetShootPos() + dir * 32)
+        ball:SetOwner(ply)
+        ball:SetSaveValue("m_flRadius", 10)
+        ball:Spawn()
+        ball:Activate()
+        ball:SetSaveValue("m_nState", 3)
+        ball:SetSaveValue("m_flSpeed", 1500)
+        ball:SetSaveValue("m_bWeaponLaunched", true)
+
+        local phys = ball:GetPhysicsObject()
+        if IsValid(phys) then phys:SetVelocity(dir * 1500) end
+
+        ball:EmitSound("Weapon_AR2.Double")
+        ball:Fire("Explode", "", 3)
+    end
+}
+
+-- Dissolves the NPC that killed the player, credited to the player. Bosses are skipped: dissolving
+-- them could break the story scripts that wait for their normal death.
+DEF["fizzle_killer"] = {
+    Describe = function() return "Whatever kills you is dissolved" end,
+    OnDeath = function(ply, value, attacker)
+        if not IsValid(attacker) or not attacker:IsNPC() or HLRPG.BossNPCs[attacker:GetClass()] then return end
+
+        local dmg = DamageInfo()
+        dmg:SetDamage(attacker:Health() + 1000)
+        dmg:SetDamageType(DMG_DISSOLVE)
+        dmg:SetAttacker(ply)
+        dmg:SetInflictor(ply)
+        attacker:TakeDamageInfo(dmg)
+    end
+}
+
+-- The blast counts as the player's damage: other players, friendly NPCs and pets are protected by
+-- sv_combat.lua, and enemies it kills give the player XP as usual
+local DEATH_EXPLOSION_RADIUS = 300
+
+DEF["death_explosion"] = {
+    Describe = function(value) return "Explodes on death, dealing up to " .. value .. " damage nearby" end,
+    OnDeath = function(ply, value)
+        local pos = ply:GetPos() + Vector(0, 0, 32)
+
+        local effect = EffectData()
+        effect:SetOrigin(pos)
+        util.Effect("Explosion", effect)
+        util.Effect("HelicopterMegaBomb", effect)
+
+        util.BlastDamage(ply, ply, pos, DEATH_EXPLOSION_RADIUS, value)
     end
 }
 
@@ -199,7 +288,22 @@ DEF["combine_vision"] = {
 
 -- Dispatch (shared; equipment state comes from networked vars, so the client sees the same abilities)
 
--- Item IDs ply currently has equipped: suit, hat and every active upgrade
+-- A client setting's value. The server sees it through the player's userinfo; the client reads its own convar.
+local function GetSetting(ply, name)
+    if CLIENT then
+        local cvar = GetConVar(name)
+        return cvar and cvar:GetInt() or 1
+    end
+    return ply:GetInfoNum(name, 1)
+end
+
+-- Whether ply has a feature item switched on: owned, and its client setting (cl_player_hub.lua) not 0
+function HLRPG.IsFeatureEnabled(ply, itemID)
+    local asset = HLRPG.Assets[itemID]
+    return ply:GetNWBool("HLRPG_Owned_" .. itemID, false) and GetSetting(ply, asset.setting) ~= 0
+end
+
+-- Item IDs ply currently has equipped: suit, hat, every active upgrade and every enabled feature
 function HLRPG.GetEquippedItems(ply)
     local items = {}
 
@@ -210,6 +314,8 @@ function HLRPG.GetEquippedItems(ply)
 
     for itemID, asset in pairs(HLRPG.Assets) do
         if asset.type == "modifier" and ply:GetNWBool("HLRPG_ModActive_" .. itemID, false) then
+            items[#items + 1] = itemID
+        elseif asset.type == "feature" and HLRPG.IsFeatureEnabled(ply, itemID) then
             items[#items + 1] = itemID
         end
     end
@@ -258,6 +364,22 @@ function HLRPG.RunItemAbilityHook(ply, itemID, hookName)
     end)
 end
 
+-- Whether any active item grants the ability (weapon-scoped items only while that weapon is out)
+function HLRPG.HasAbility(ply, abilityID)
+    local wep = ply:GetActiveWeapon()
+    local weaponClass = IsValid(wep) and wep:GetClass() or nil
+
+    for _, itemID in ipairs(HLRPG.GetEquippedItems(ply)) do
+        local item = HLRPG.Assets[itemID]
+        if not item.scope or item.scope == weaponClass then
+            for _, ability in ipairs(item.abilities or {}) do
+                if ability.id == abilityID then return true end
+            end
+        end
+    end
+    return false
+end
+
 -- Sum of an ability's values across everything ply has active (0 if none)
 function HLRPG.GetAbilityValue(ply, abilityID)
     local total = 0
@@ -278,3 +400,8 @@ function HLRPG.DescribeAbilities(item)
     end
     return table.concat(lines, "  •  ")
 end
+
+-- Input abilities run on both realms so the client's prediction matches the server
+hook.Add("StartCommand", "HLRPG_AbilityInput", function(ply, cmd)
+    HLRPG.RunAbilityHook(ply, "StartCommand", cmd)
+end)

@@ -6,8 +6,11 @@ HLRPG.Config = {}
 -- %s is replaced with the player's name
 HLRPG.Config.WelcomeMessage = ">>> Welcome, %s! Join our discord at: https://discord.gg/d588UVcpzD <<<"
 
--- Workshop items clients download on join (780244493 = Lambda - Half-Life 2 Co-Op content)
-HLRPG.Config.WorkshopContent = { "780244493" }
+-- Workshop items clients download on join
+HLRPG.Config.WorkshopContent = {
+    "780244493",  -- Lambda - Half-Life 2 Co-Op content
+    "3320656757", -- Gordon Freeman Restored (HEV Suit model)
+}
 
 -- Pets cannot be summoned on these maps
 HLRPG.Config.SafeMaps = {

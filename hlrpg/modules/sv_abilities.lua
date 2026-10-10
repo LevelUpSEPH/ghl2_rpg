@@ -5,7 +5,7 @@
 local BASE_MAX_ARMOR = 100
 
 -- Recomputes max health/armor from level + abilities. refill sets health to the new max (spawn, level up);
--- otherwise current health and armor are only clamped.
+-- otherwise current health and armor are only clamped. (Jump power is applied per tick in sh_abilities.lua.)
 function HLRPG.RefreshStats(ply, refill)
     if not IsValid(ply) or not ply.HLRPG_Level then return end
 
@@ -20,6 +20,8 @@ function HLRPG.RefreshStats(ply, refill)
 
     ply:SetHealth(refill and stats.maxHealth or math.min(ply:Health(), stats.maxHealth))
     ply:SetArmor(math.min(ply:Armor(), stats.maxArmor))
+
+    if refill then HLRPG.RunAbilityHook(ply, "OnRefill") end
 end
 
 -- Equipment controllers call this after an item slot changes (either ID may be "none")
@@ -39,6 +41,10 @@ hook.Add("PlayerSpawn", "HLRPG_ApplyStats", function(ply)
     timer.Simple(0.1, function()
         HLRPG.RefreshStats(ply, true)
     end)
+end)
+
+hook.Add("PlayerDeath", "HLRPG_AbilityDeath", function(ply, inflictor, attacker)
+    HLRPG.RunAbilityHook(ply, "OnDeath", attacker, inflictor)
 end)
 
 timer.Create("HLRPG_AbilityThink", 1, 0, function()

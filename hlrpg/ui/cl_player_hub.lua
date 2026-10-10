@@ -11,9 +11,23 @@ local CATEGORIES = {
 
 local activeTab = "Shop"
 
+-- Feature items (e.g. Bunny Hop) are switched on/off by clicking them in the inventory. The switch is a
+-- client convar: saved on the player's machine and sent to the server, which reads it through GetInfoNum.
+for _, asset in pairs(HLRPG.Assets) do
+    if asset.type == "feature" then
+        CreateClientConVar(asset.setting, "1", true, true, "HLRPG: enable " .. asset.name)
+    end
+end
+
+local function SetFeatureEnabled(itemID, enabled)
+    RunConsoleCommand(HLRPG.Assets[itemID].setting, enabled and "1" or "0")
+end
+
 local function IsEquipped(groupName, itemID)
     local ply = LocalPlayer()
-    if groupName == "Suits" then
+    if HLRPG.Assets[itemID].type == "feature" then
+        return HLRPG.IsFeatureEnabled(ply, itemID)
+    elseif groupName == "Suits" then
         return ply:GetNWString("HLRPG_ActiveSuit", "") == itemID
     elseif groupName == "Pets" then
         return ply:GetNWString("HLRPG_ActivePet", "none") == itemID
@@ -128,6 +142,10 @@ local function CreateItemIcon(grid, detailPanel, groupName, itemID, info, refres
             net.Start("HLRPG_Shop_Purchase")
                 net.WriteString(itemID)
             net.SendToServer()
+        elseif info.type == "feature" then
+            -- Features are a client setting, not equipment
+            SetFeatureEnabled(itemID, not isEquipped)
+            chat.AddText(Color(255, 180, 0), "[INV] ", color_white, info.name .. (isEquipped and " disabled." or " enabled."))
         else
             SendEquip(itemID)
         end

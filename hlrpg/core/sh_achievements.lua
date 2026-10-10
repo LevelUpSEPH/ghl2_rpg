@@ -84,6 +84,7 @@ HLRPG.Achievements = {
         name = "Revenge",
         desc = "Defeat the Chopper",
         xp = 2000,
+        rewardItem = "hat_helibomb",
         icon = "resources/icons/achievements/hl2_revenge.png",
         isGlobal = true
     },
