@@ -9,6 +9,8 @@ local HEADER_TEXT = Color(150, 150, 150)
 local NAV_PAGES = {
     { label = "SHOP",         icon = "icon16/cart.png",              open = function() HLRPG.OpenPlayerHub() end },
     { label = "CHARACTER",    icon = "icon16/user_suit.png",         open = function() HLRPG.OpenModelMenu() end },
+    { label = "STATS",        icon = "icon16/star.png",              open = function() HLRPG.OpenStatsMenu() end,
+      badge = function() return HLRPG.GetFreeStatPoints(LocalPlayer()) end },
     { label = "ACHIEVEMENTS", icon = "icon16/award_star_gold_1.png", open = function() HLRPG.RequestMenu("achievements") end },
     { label = "LAMBDAS",      icon = "icon16/map.png",               open = function() HLRPG.RequestMenu("lambdas") end },
     { label = "VOTE",         icon = "icon16/thumb_up.png",          open = function() HLRPG.OpenVoteMenu() end },
@@ -59,6 +61,13 @@ local function CreateNavTile(board, page)
         surface.DrawTexturedRect(w / 2 - 8, 9, 16, 16)
 
         draw.SimpleText(page.label, "DermaDefaultBold", w / 2, h - 14, hovered and ACCENT or color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+        -- Optional count in the corner, e.g. unspent stat points
+        local badge = page.badge and page.badge() or 0
+        if badge > 0 then
+            draw.RoundedBox(8, w - 34, 6, 26, 16, ACCENT)
+            draw.SimpleText("+" .. badge, "DermaDefaultBold", w - 21, 14, Color(0, 0, 0), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
     end
 
     btn.DoClick = function()

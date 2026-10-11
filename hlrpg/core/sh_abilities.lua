@@ -1,7 +1,7 @@
 -- hlrpg/core/sh_abilities.lua
--- Every gameplay effect an item can have. Items (suits, hats, upgrades) don't contain logic; they list
--- the abilities they grant in sh_assets.lua:
---   abilities = { { id = "armor_regen", value = 1 } }
+-- Every gameplay effect in the game. Nothing else contains effect logic; abilities are granted by:
+--   items (suits, hats, upgrades) in sh_assets.lua:  abilities = { { id = "armor_regen", value = 1 } }
+--   stat points and stat milestones in sh_stats.lua
 -- An item with a `scope` (weapon class) only grants its abilities while that weapon is out.
 --
 -- Every callback receives (ply, value, ...). Callbacks a definition doesn't need can be left out.
@@ -14,6 +14,7 @@
 --   OnDealDamage(ply, value, target, dmginfo)
 --   OnTakeDamage(ply, value, attacker, dmginfo)
 --   OnLethalDamage(ply, value, dmginfo)     -> return true to survive the hit
+--   AfterTakeDamage(ply, value, attacker, healthLost, armorLost) -> the hit has been applied
 --   OnDeath(ply, value, attacker, inflictor)
 -- Shared (runs on the server and in the local player's prediction):
 --   StartCommand(ply, value, cmd)           -> edit the player's input before it's processed
@@ -43,21 +44,41 @@ DEF["bonus_armor"] = {
     Stats = function(ply, value, stats) stats.maxArmor = stats.maxArmor + value end
 }
 
+local function AddHealth(ply, amount)
+    if ply:Health() < ply:GetMaxHealth() then
+        ply:SetHealth(math.min(ply:GetMaxHealth(), ply:Health() + amount))
+    end
+end
+
+local function AddArmor(ply, amount)
+    if ply:Armor() < ply:GetMaxArmor() then
+        ply:SetArmor(math.min(ply:GetMaxArmor(), ply:Armor() + amount))
+    end
+end
+
 DEF["health_regen"] = {
     Describe = function(value) return "Regenerates " .. value .. " health/s out of combat" end,
     Think = function(ply, value)
-        if CanRegen(ply) and ply:Health() < ply:GetMaxHealth() then
-            ply:SetHealth(math.min(ply:GetMaxHealth(), ply:Health() + value))
-        end
+        if CanRegen(ply) then AddHealth(ply, value) end
     end
 }
 
 DEF["armor_regen"] = {
     Describe = function(value) return "Regenerates " .. value .. " armor/s out of combat" end,
     Think = function(ply, value)
-        if CanRegen(ply) and ply:Armor() < ply:GetMaxArmor() and not HLRPG.HasAbility(ply, "no_armor_regen") then
-            ply:SetArmor(math.min(ply:GetMaxArmor(), ply:Armor() + value))
-        end
+        if CanRegen(ply) and not HLRPG.HasAbility(ply, "no_armor_regen") then AddArmor(ply, value) end
+    end
+}
+
+DEF["combat_health_regen"] = {
+    Describe = function(value) return "Regenerates " .. value .. " health/s, even in combat" end,
+    Think = function(ply, value) AddHealth(ply, value) end
+}
+
+DEF["combat_armor_regen"] = {
+    Describe = function(value) return "Regenerates " .. value .. " armor/s, even in combat" end,
+    Think = function(ply, value)
+        if not HLRPG.HasAbility(ply, "no_armor_regen") then AddArmor(ply, value) end
     end
 }
 
@@ -137,6 +158,66 @@ DEF["pellet_multiplier"] = {
     OnFireBullets = function(ply, value, data)
         data.Num = math.floor(data.Num * value)
         data.Spread = data.Spread * 1.2
+    end
+}
+
+DEF["damage_bonus"] = {
+    Describe = function(value) return "+" .. math.Round(value * 100) .. "% damage" end,
+    OnDealDamage = function(ply, value, target, dmginfo)
+        dmginfo:ScaleDamage(1 + value)
+    end
+}
+
+local CRIT_MULTIPLIER = 1.5
+
+DEF["crit_chance"] = {
+    Describe = function(value) return math.Round(value * 100) .. "% chance to crit for x" .. CRIT_MULTIPLIER .. " damage" end,
+    OnDealDamage = function(ply, value, target, dmginfo)
+        if math.random() < value then dmginfo:ScaleDamage(CRIT_MULTIPLIER) end
+    end
+}
+
+-- Bonus damage grows with missing health: value 1 means +1% damage per 1% of health missing
+DEF["grudge"] = {
+    Describe = function(value) return "Up to +" .. math.Round(value * 100) .. "% damage the lower your health is" end,
+    OnDealDamage = function(ply, value, target, dmginfo)
+        local missing = 1 - math.Clamp(ply:Health() / math.max(ply:GetMaxHealth(), 1), 0, 1)
+        dmginfo:ScaleDamage(1 + missing * value)
+    end
+}
+
+-- Part of the damage that reaches health comes back as armor
+DEF["health_to_armor"] = {
+    Describe = function(value) return math.Round(value * 100) .. "% of health damage taken becomes armor" end,
+    AfterTakeDamage = function(ply, value, attacker, healthLost)
+        local gained = math.floor(healthLost * value)
+        if gained > 0 then AddArmor(ply, gained) end
+    end
+}
+
+-- Armor damage taken is dealt back to the NPC that caused it
+DEF["reflect_armor_damage"] = {
+    Describe = function(value) return "Armor damage taken is reflected back at the attacker" end,
+    AfterTakeDamage = function(ply, value, attacker, healthLost, armorLost)
+        if armorLost <= 0 or not IsValid(attacker) or not attacker:IsNPC() then return end
+
+        local dmg = DamageInfo()
+        dmg:SetDamage(armorLost * value)
+        dmg:SetDamageType(DMG_SHOCK)
+        dmg:SetAttacker(ply)
+        dmg:SetInflictor(ply)
+        attacker:TakeDamageInfo(dmg)
+    end
+}
+
+-- Only enemy attacks can be dodged (not falls, drowning, explosions you caused, etc.)
+DEF["dodge_chance"] = {
+    Describe = function(value) return math.Round(value * 100, 1) .. "% chance to dodge enemy attacks" end,
+    OnTakeDamage = function(ply, value, attacker, dmginfo)
+        if not IsValid(attacker) or not attacker:IsNPC() or math.random() >= value then return end
+
+        dmginfo:SetDamage(0)
+        ply:EmitSound("weapons/fx/nearmiss/bulletltor0" .. math.random(3, 7) .. ".wav", 60)
     end
 }
 
@@ -323,35 +404,39 @@ function HLRPG.GetEquippedItems(ply)
     return items
 end
 
--- Calls callback(def, value) for each ability on one item
-local function ForEachItemAbility(itemID, callback)
-    local item = HLRPG.Assets[itemID]
-    if not item or not item.abilities then return end
+-- Every ability instance ply has right now, as { id, value, scope }: stat points and milestones first
+-- (so items, e.g. a hat's fixed max health, can override them), then equipped items.
+function HLRPG.GetActiveAbilities(ply)
+    local list = HLRPG.GetStatAbilities(ply)
 
-    for _, ability in ipairs(item.abilities) do
-        local def = HLRPG.Abilities[ability.id]
-        if def then
-            local result = callback(def, ability.value)
-            if result ~= nil then return result end
+    for _, itemID in ipairs(HLRPG.GetEquippedItems(ply)) do
+        local item = HLRPG.Assets[itemID]
+        for _, ability in ipairs(item.abilities or {}) do
+            list[#list + 1] = { id = ability.id, value = ability.value, scope = item.scope }
         end
     end
+
+    return list
 end
 
--- Runs hookName on every active ability of ply. Stops at, and returns, the first non-nil result.
-function HLRPG.RunAbilityHook(ply, hookName, ...)
-    local args, argCount = { ... }, select("#", ...)
-
+-- Active abilities that apply right now (weapon-scoped ones only while that weapon is out)
+local function GetApplicableAbilities(ply)
     local wep = ply:GetActiveWeapon()
     local weaponClass = IsValid(wep) and wep:GetClass() or nil
 
-    for _, itemID in ipairs(HLRPG.GetEquippedItems(ply)) do
-        local scope = HLRPG.Assets[itemID].scope
-        if not scope or scope == weaponClass then
-            local result = ForEachItemAbility(itemID, function(def, value)
-                if def[hookName] then
-                    return def[hookName](ply, value, unpack(args, 1, argCount))
-                end
-            end)
+    local list = {}
+    for _, ability in ipairs(HLRPG.GetActiveAbilities(ply)) do
+        if not ability.scope or ability.scope == weaponClass then list[#list + 1] = ability end
+    end
+    return list
+end
+
+-- Runs hookName on every applicable ability of ply. Stops at, and returns, the first non-nil result.
+function HLRPG.RunAbilityHook(ply, hookName, ...)
+    for _, ability in ipairs(GetApplicableAbilities(ply)) do
+        local def = HLRPG.Abilities[ability.id]
+        if def and def[hookName] then
+            local result = def[hookName](ply, ability.value, ...)
             if result ~= nil then return result end
         end
     end
@@ -359,34 +444,24 @@ end
 
 -- Runs hookName for one item's abilities only (OnEquip / OnUnequip)
 function HLRPG.RunItemAbilityHook(ply, itemID, hookName)
-    ForEachItemAbility(itemID, function(def, value)
-        if def[hookName] then def[hookName](ply, value) end
-    end)
+    for _, ability in ipairs(HLRPG.Assets[itemID] and HLRPG.Assets[itemID].abilities or {}) do
+        local def = HLRPG.Abilities[ability.id]
+        if def and def[hookName] then def[hookName](ply, ability.value) end
+    end
 end
 
--- Whether any active item grants the ability (weapon-scoped items only while that weapon is out)
 function HLRPG.HasAbility(ply, abilityID)
-    local wep = ply:GetActiveWeapon()
-    local weaponClass = IsValid(wep) and wep:GetClass() or nil
-
-    for _, itemID in ipairs(HLRPG.GetEquippedItems(ply)) do
-        local item = HLRPG.Assets[itemID]
-        if not item.scope or item.scope == weaponClass then
-            for _, ability in ipairs(item.abilities or {}) do
-                if ability.id == abilityID then return true end
-            end
-        end
+    for _, ability in ipairs(GetApplicableAbilities(ply)) do
+        if ability.id == abilityID then return true end
     end
     return false
 end
 
--- Sum of an ability's values across everything ply has active (0 if none)
+-- Sum of an ability's values across everything that applies right now (0 if none)
 function HLRPG.GetAbilityValue(ply, abilityID)
     local total = 0
-    for _, itemID in ipairs(HLRPG.GetEquippedItems(ply)) do
-        for _, ability in ipairs(HLRPG.Assets[itemID].abilities or {}) do
-            if ability.id == abilityID then total = total + (ability.value or 0) end
-        end
+    for _, ability in ipairs(GetApplicableAbilities(ply)) do
+        if ability.id == abilityID then total = total + (ability.value or 0) end
     end
     return total
 end

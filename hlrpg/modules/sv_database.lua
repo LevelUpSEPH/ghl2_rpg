@@ -70,6 +70,21 @@ function meta:SyncInventoryToClient()
     end
 end
 
+-- Stats (points spent per stat, see core/sh_stats.lua). Networked so stat abilities apply on both realms.
+
+function meta:LoadStats()
+    local saved = LoadJSON(self, "HLRPG_Stats")
+    for _, stat in ipairs(HLRPG.Stats) do
+        self:SetNWInt("HLRPG_Stat_" .. stat.id, tonumber(saved[stat.id]) or 0)
+    end
+end
+
+function meta:SaveStats()
+    local data = {}
+    for _, stat in ipairs(HLRPG.Stats) do data[stat.id] = HLRPG.GetStatPoints(self, stat.id) end
+    SaveJSON(self, "HLRPG_Stats", data)
+end
+
 -- Achievements / Lambdas
 
 -- Counts are networked for the scoreboard
@@ -154,6 +169,23 @@ function meta:SaveSuit()
     self:SetPData("HLRPG_ActiveSuit", self:GetNWString("HLRPG_ActiveSuit", "none"))
 end
 
+-- Base player model picked in the F1 menu. Only models still in HLRPG.Config.Models are restored.
+function meta:SavePlayerModel()
+    self:SetPData("HLRPG_PlayerModel", self.HLRPG_Model or "")
+end
+
+function meta:LoadPlayerModel()
+    local model = self:GetPData("HLRPG_PlayerModel", "")
+    for _, entry in ipairs(HLRPG.Config.Models) do
+        if entry.model == model then
+            self.HLRPG_Model = model
+            self:SetModel(model)
+            self:SetupHands()
+            return
+        end
+    end
+end
+
 function meta:LoadSuit()
     local suitID = self:GetPData("HLRPG_ActiveSuit", "none")
     if HLRPG.Assets[suitID] then HLRPG.ApplySuit(self, suitID) end
@@ -166,7 +198,9 @@ function meta:InitialRPGSetup()
     self:LoadAchievements()
     self:LoadLambdas()
     self:LoadPetData()
+    self:LoadStats()
     self:SyncInventoryToClient()
+    self:LoadPlayerModel()
     self:LoadHat()
     self:LoadSuit()
 

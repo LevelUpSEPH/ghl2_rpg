@@ -3,8 +3,9 @@
 
 util.AddNetworkString("HLRPG_XPNotify")
 
+-- +5 per level; the HP stat adds more on top (core/sh_stats.lua)
 function HLRPG.GetLevelMaxHealth(level)
-    return 100 + ((level - 1) * 10)
+    return 100 + ((level - 1) * 5)
 end
 
 local function PerformLevelUp(ply)
@@ -21,7 +22,7 @@ local function PerformLevelUp(ply)
         HLRPG.RefreshStats(ply, true)
 
         ply:EmitSound("ambient/levels/citadel/weapon_disintegrate2.wav", 100, 120)
-        ply:ChatPrint(">>> LEVEL UP: " .. newLevel .. " <<<")
+        ply:ChatPrint(">>> LEVEL UP: " .. newLevel .. " <<<  You have " .. HLRPG.GetFreeStatPoints(ply) .. " stat point(s) to spend (TAB > STATS)")
     end
 
     ply:SetNWInt("HLRPG_MaxXP", HLRPG.GetRequiredXP(ply.HLRPG_Level))

@@ -315,6 +315,6 @@ HLRPG.Assets = {
         group = "Permanent Upgrades",
         type = "modifier",
         scope = "weapon_shotgun",
-        abilities = { { id = "pellet_multiplier", value = 6 } }
+        abilities = { { id = "pellet_multiplier", value = 2 } }
     }
 }

@@ -12,8 +12,8 @@ HLRPG.DifficultyScales = {
 
 -- multiplier = (base + perLevel * (level - 1)) * growth ^ (level - 1)
 -- Player weapons don't get stronger with level, so HP growth is kept gentle (it directly sets how long fights
--- take). DMG grows slightly faster than player max health (+10/level, sv_progression.lua), so high-level
--- fights are short and dangerous rather than long.
+-- take). DMG was tuned against +10 player health per level; players now get +5 per level plus whatever they
+-- put into the HP and ARMOR stats (sh_stats.lua), so high-level fights are short and dangerous.
 --   Level:  1     8     16    27    42    50
 --   HP:     0.80  1.01  1.25  1.58  2.03  2.27
 --   DMG:    1.00  1.84  2.80  4.12  5.92  6.88

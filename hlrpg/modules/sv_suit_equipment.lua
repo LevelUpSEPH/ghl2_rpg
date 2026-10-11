@@ -58,8 +58,11 @@ end
 
 function HLRPG.SetPlayerModel(ply, model)
     ply.HLRPG_Model = model
+    ply:SavePlayerModel()
     ply:SetModel(model)
     ply:SetupHands()
+    -- A worn suit draws the player's head from their model, so redraw it with the new one
+    if ply.HLRPG_Suit then SendSuit(ply) end
     ply:ChatPrint("Clothing changed.")
 end
 
