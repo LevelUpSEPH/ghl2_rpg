@@ -136,6 +136,24 @@ function HLRPG.AddPetXP(ply, petID, amount)
 end
 
 -- Pets gain 1 XP per kill
+-- Summoning is refused on safe maps (SummonPet), but Lambda's level transitions carry NPCs standing in the
+-- changelevel area over to the next map. Pets are left behind when heading into a safe map, and any that
+-- still arrive on one are removed once the map and its transition have loaded.
+local function RemoveAllPets()
+    for _, ent in ipairs(ents.GetAll()) do
+        if ent.IsHLRPGPet or ent:GetNWBool("HLRPG_ISPET", false) then ent:Remove() end
+    end
+end
+
+hook.Add("LambdaPreChangelevel", "HLRPG_NoPetsIntoSafeMaps", function(nextMap)
+    if HLRPG.Config.SafeMaps[string.lower(nextMap or "")] then RemoveAllPets() end
+end)
+
+hook.Add("InitPostEntity", "HLRPG_NoPetsOnSafeMaps", function()
+    if not HLRPG.IsSafeMap() then return end
+    timer.Simple(3, RemoveAllPets)
+end)
+
 hook.Add("OnNPCKilled", "HLRPG_Pet_XP_Logic", function(victim, attacker, inflictor)
     if not IsValid(attacker) or not attacker.IsHLRPGPet or not IsValid(attacker.OwnerPly) then return end
 
