@@ -120,14 +120,9 @@ hook.Add("PlayerSpawn", "HLRPG_Spawn_Hands", function(ply)
 end)
 
 -- Late joiners need everyone else's suits
-hook.Add("PlayerInitialSpawn", "HLRPG_Sync_Suits", function(newPly)
-    timer.Simple(5, function()
-        if not IsValid(newPly) then return end
-
-        for _, ply in ipairs(player.GetAll()) do
-            if ply ~= newPly and GetSuit(ply.HLRPG_Suit) then
-                SendSuit(ply, newPly)
-            end
-        end
-    end)
+-- A client that just finished loading needs every suit, its own included
+hook.Add("HLRPG_ClientReady", "HLRPG_Sync_Suits", function(newPly)
+    for _, ply in ipairs(player.GetAll()) do
+        if GetSuit(ply.HLRPG_Suit) then SendSuit(ply, newPly) end
+    end
 end)

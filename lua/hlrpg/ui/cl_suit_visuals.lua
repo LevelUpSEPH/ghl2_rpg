@@ -171,3 +171,9 @@ hook.Add("Think", "HLRPG_Global_Visual_Enforce", function()
         end
     end
 end)
+
+-- Ask for everyone's suits and hats once loaded (sv_player.lua); earlier messages may have been missed
+hook.Add("InitPostEntity", "HLRPG_ClientReady", function()
+    net.Start("HLRPG_ClientReady")
+    net.SendToServer()
+end)

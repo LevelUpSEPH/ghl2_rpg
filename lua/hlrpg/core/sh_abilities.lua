@@ -555,31 +555,290 @@ DEF["heal_aura"] = {
 
 -- Vision
 
+-- Combine visor: an Overwatch tactical AI. Tints the view slightly and overlays a status readout, a compass,
+-- a rangefinder on whatever is under the crosshair, and an analysis of every NPC in line of sight: hostiles get
+-- a level-based threat, motion vector and weak point; friendlies and pets are marked as such. Nothing is shown
+-- through walls.
+local VISOR = Color(130, 215, 255)
+local THREAT_COLORS = { Color(130, 215, 255), Color(255, 190, 60), Color(255, 70, 55) }
+local THREAT_NAMES = { "LOW", "ELEVATED", "SEVERE" }
+local FRIENDLY_COLOR = Color(110, 230, 140)
+-- Short tag and full designation per NPC class; others get a name made from their class
+local VISOR_UNITS = {
+    npc_combine_s = { "OTA", "OVERWATCH SOLDIER" }, npc_metropolice = { "CP", "CIVIL PROTECTION" },
+    npc_manhack = { "MANHACK", "VISCERATOR" }, npc_cscanner = { "SCANNER", "CITY SCANNER" },
+    npc_clawscanner = { "SCANNER", "CLAW SCANNER" }, npc_rollermine = { "ROLLERMINE", "ROLLERMINE" },
+    npc_turret_floor = { "TURRET", "AUTO-TURRET" }, npc_hunter = { "HUNTER", "HUNTER SYNTH" },
+    npc_strider = { "STRIDER", "STRIDER SYNTH" }, npc_combinegunship = { "GUNSHIP", "GUNSHIP SYNTH" },
+    npc_helicopter = { "HELI", "HUNTER-CHOPPER" }, npc_combinedropship = { "DROPSHIP", "DROPSHIP SYNTH" },
+    npc_zombie = { "ZOMBIE", "NECROTIC: STANDARD" }, npc_zombie_torso = { "ZOMBIE", "NECROTIC: TORSO" },
+    npc_fastzombie = { "FAST ZOMBIE", "NECROTIC: FAST" }, npc_fastzombie_torso = { "FAST ZOMBIE", "NECROTIC: FAST TORSO" },
+    npc_poisonzombie = { "POISON ZOMBIE", "NECROTIC: POISON CARRIER" }, npc_zombine = { "ZOMBINE", "NECROTIC: EX-OVERWATCH" },
+    npc_headcrab = { "HEADCRAB", "PARASITE: STANDARD" }, npc_headcrab_fast = { "HEADCRAB", "PARASITE: FAST" },
+    npc_headcrab_black = { "HEADCRAB", "PARASITE: VENOMOUS" }, npc_headcrab_poison = { "HEADCRAB", "PARASITE: VENOMOUS" },
+    npc_antlion = { "ANTLION", "XENOFAUNA: ANTLION" }, npc_antlion_worker = { "ANTLION", "XENOFAUNA: ACID WORKER" },
+    npc_antlionguard = { "GUARD", "XENOFAUNA: ANTLION GUARD" }, npc_barnacle = { "BARNACLE", "XENOFAUNA: BARNACLE" },
+    npc_ichthyosaur = { "ICHTHYOSAUR", "XENOFAUNA: ICHTHYOSAUR" }, npc_advisor = { "ADVISOR", "COMBINE ADVISOR" },
+    npc_citizen = { "CITIZEN", "CIVILIAN / RESISTANCE" }, npc_alyx = { "VANCE", "ALYX VANCE" },
+    npc_barney = { "CALHOUN", "BARNEY CALHOUN" }, npc_kleiner = { "KLEINER", "DR. ISAAC KLEINER" },
+    npc_eli = { "VANCE", "DR. ELI VANCE" }, npc_magnusson = { "MAGNUSSON", "DR. ARNE MAGNUSSON" },
+    npc_mossman = { "MOSSMAN", "DR. JUDITH MOSSMAN" }, npc_vortigaunt = { "VORTIGAUNT", "XENOFAUNA: VORTIGAUNT" },
+    npc_dog = { "DOG", "ROBOT: DOG" }, npc_monk = { "GRIGORI", "FATHER GRIGORI" }, npc_breen = { "BREEN", "DR. WALLACE BREEN" },
+    npc_crow = { "CROW", "FAUNA: CROW" }, npc_pigeon = { "PIGEON", "FAUNA: PIGEON" }, npc_seagull = { "SEAGULL", "FAUNA: SEAGULL" },
+}
+
+local function UnitNames(ent)
+    local known = VISOR_UNITS[ent:GetClass()]
+    if known then return known end
+    local name = string.upper(string.gsub(string.gsub(ent:GetClass(), "^npc_", ""), "_", " "))
+    return { name, name }
+end
+
+-- "pet", "friendly" or "hostile"
+local function Allegiance(ent)
+    if ent:GetNWBool("HLRPG_ISPET", false) then return "pet" end
+    if HLRPG.FriendlyNPCs[ent:GetClass()] then return "friendly" end
+    return "hostile"
+end
+
+local WEAK_BONES = { "ValveBiped.Bip01_Head1", "Combine_Strider.Head_Bone", "MiniStrider.head_bone", "Antlion.Head_Bone", "Antlion_Guard.head" }
+local VISOR_RANGE = 3000
+local UNITS_TO_M = 0.01905
+local visorTargets, nextTargetScan, visorMats = {}, 0, nil
+
+if CLIENT then
+    surface.CreateFont("HLRPG_Visor", { font = "Lucida Console", size = 13, weight = 600, antialias = true })
+    surface.CreateFont("HLRPG_VisorSmall", { font = "Lucida Console", size = 11, weight = 500, antialias = true })
+end
+
+-- Text with a dark drop shadow so it reads on bright backgrounds
+local function VText(text, font, x, y, col, alpha, align)
+    draw.SimpleText(text, font, x + 1, y + 1, Color(0, 0, 0, alpha * 0.8), align or TEXT_ALIGN_LEFT)
+    draw.SimpleText(text, font, x, y, ColorAlpha(col, alpha), align or TEXT_ALIGN_LEFT)
+end
+
+-- 1 low .. 3 severe, from the unit's level against the player's
+local function ThreatLevel(ply, ent)
+    local diff = ent:GetNWInt("HLRPG_NPCLevel", 1) - ply:GetNWInt("HLRPG_Level", 1)
+    if ent:GetNWBool("HLRPG_IsBoss", false) or diff >= 5 then return 3 end
+    return diff >= 0 and 2 or 1
+end
+
+-- NPCs in range and in line of sight (bullet trace, so the NPC's own body counts), refreshed 5x/s
+local function ScanVisorTargets(ply)
+    if CurTime() < nextTargetScan then return visorTargets end
+    nextTargetScan = CurTime() + 0.2
+    visorTargets = {}
+
+    local eye = ply:EyePos()
+    for _, ent in ipairs(ents.FindInSphere(eye, VISOR_RANGE)) do
+        if ent:IsNPC() and ent:Health() > 0 then
+            local tr = util.TraceLine({ start = eye, endpos = ent:WorldSpaceCenter(), filter = ply, mask = MASK_SHOT })
+            if tr.Entity == ent or tr.Fraction > 0.98 then visorTargets[#visorTargets + 1] = ent end
+        end
+    end
+    return visorTargets
+end
+
+local function Corners(x, y, w, h, len, col, alpha)
+    surface.SetDrawColor(col.r, col.g, col.b, alpha)
+    surface.DrawRect(x, y, len, 2); surface.DrawRect(x, y, 2, len)
+    surface.DrawRect(x + w - len, y, len, 2); surface.DrawRect(x + w - 2, y, 2, len)
+    surface.DrawRect(x, y + h - 2, len, 2); surface.DrawRect(x, y + h - len, 2, len)
+    surface.DrawRect(x + w - len, y + h - 2, len, 2); surface.DrawRect(x + w - 2, y + h - len, 2, len)
+end
+
+-- Screen-space box around an entity's bounds, or nil if any part is behind the camera
+local function ScreenBox(ent)
+    local mins, maxs = ent:OBBMins(), ent:OBBMaxs()
+    local x0, y0, x1, y1 = math.huge, math.huge, -math.huge, -math.huge
+    for i = 0, 7 do
+        local corner = Vector(bit.band(i, 1) > 0 and maxs.x or mins.x, bit.band(i, 2) > 0 and maxs.y or mins.y, bit.band(i, 4) > 0 and maxs.z or mins.z)
+        local s = ent:LocalToWorld(corner):ToScreen()
+        if not s.visible then return nil end
+        x0, y0, x1, y1 = math.min(x0, s.x), math.min(y0, s.y), math.max(x1, s.x), math.max(y1, s.y)
+    end
+    return x0, y0, x1 - x0, y1 - y0
+end
+
+-- World position of the unit's head (or equivalent), if it has one
+local function WeakPoint(ent)
+    for _, name in ipairs(WEAK_BONES) do
+        local bone = ent:LookupBone(name)
+        if bone then
+            local pos = ent:GetBonePosition(bone)
+            if pos then return pos end
+        end
+    end
+end
+
+local COMPASS_NAMES = { [0] = "N", [45] = "NE", [90] = "E", [135] = "SE", [180] = "S", [225] = "SW", [270] = "W", [315] = "NW" }
+
+local function DrawCompass(w, yaw, alpha)
+    local cx, y, span = w / 2, 46, 360
+    local heading = (90 - yaw) % 360
+    surface.SetDrawColor(VISOR.r, VISOR.g, VISOR.b, alpha * 0.6)
+    surface.DrawRect(cx - span, y + 14, span * 2, 1)
+    for deg = 0, 345, 15 do
+        local d = (deg - heading + 540) % 360 - 180
+        if math.abs(d) <= 60 then
+            local x = cx + d / 60 * span
+            local major = deg % 45 == 0
+            surface.SetDrawColor(VISOR.r, VISOR.g, VISOR.b, alpha * 0.6)
+            surface.DrawRect(x, y + (major and 4 or 9), 1, major and 10 or 5)
+            if COMPASS_NAMES[deg] then VText(COMPASS_NAMES[deg], "HLRPG_VisorSmall", x, y - 10, VISOR, alpha, TEXT_ALIGN_CENTER) end
+        end
+    end
+    surface.SetDrawColor(VISOR.r, VISOR.g, VISOR.b, alpha)
+    surface.DrawRect(cx - 1, y + 16, 2, 8)
+    VText(string.format("%03d", math.Round(heading) % 360), "HLRPG_Visor", cx, y + 26, VISOR, alpha, TEXT_ALIGN_CENTER)
+end
+
+-- Full readout next to the unit under the crosshair
+local function DrawLockPanel(ply, ent, x, y, threat, allegiance)
+    local col = threat and THREAT_COLORS[threat] or FRIENDLY_COLOR
+    local maxHP = ent:GetMaxHealth()
+    local integrity = maxHP > 0 and math.Clamp(ent:Health() / maxHP, 0, 1) or 1
+    local lines = {
+        "> TARGET LOCK",
+        "DESIGNATION  " .. UnitNames(ent)[2],
+        "STATUS       " .. (allegiance == "pet" and "ALLY UNIT" or string.upper(allegiance)),
+        "LEVEL        " .. (allegiance == "pet" and ent:GetNWInt("HLRPG_PetEntityLevel", 1) or ent:GetNWInt("HLRPG_NPCLevel", 1)),
+        "INTEGRITY    " .. math.Round(integrity * 100) .. "%",
+        string.format("VELOCITY     %.1f m/s", ent:GetVelocity():Length() * UNITS_TO_M),
+    }
+    if threat then
+        lines[#lines + 1] = "THREAT       " .. THREAT_NAMES[threat]
+        lines[#lines + 1] = WeakPoint(ent) and "ADVISE       TARGET CRANIAL UNIT" or "ADVISE       SUSTAIN FIRE"
+    else
+        lines[#lines + 1] = "ADVISE       DO NOT ENGAGE"
+    end
+    surface.SetDrawColor(0, 0, 0, 120)
+    surface.DrawRect(x - 6, y - 4, 236, #lines * 14 + 8)
+    surface.SetDrawColor(col.r, col.g, col.b, 200)
+    surface.DrawRect(x - 6, y - 4, 2, #lines * 14 + 8)
+    for i, text in ipairs(lines) do
+        VText(text, "HLRPG_VisorSmall", x, y + (i - 1) * 14, i == 1 and col or VISOR, 230)
+    end
+end
+
+local function DrawUnit(ply, ent, eye, locked, t)
+    local x, y, bw, bh = ScreenBox(ent)
+    if not x or bw <= 2 or bh <= 2 then return end
+
+    local allegiance = Allegiance(ent)
+    local threat = allegiance == "hostile" and ThreatLevel(ply, ent) or nil
+    local col = threat and THREAT_COLORS[threat] or FRIENDLY_COLOR
+    Corners(x - 5, y - 5, bw + 10, bh + 10, math.Clamp(math.min(bw, bh) / 4, 5, 16), col, 220)
+
+    -- Tag, range and integrity bar
+    local meters = math.Round(eye:Distance(ent:WorldSpaceCenter()) * UNITS_TO_M)
+    local level = allegiance == "pet" and ent:GetNWInt("HLRPG_PetEntityLevel", 1) or ent:GetNWInt("HLRPG_NPCLevel", 1)
+    local tag = UnitNames(ent)[1] .. "  " .. (threat and ("LV" .. level) or (allegiance == "pet" and "ALLY" or "FRIENDLY"))
+    VText(tag .. "  " .. meters .. "m", "HLRPG_VisorSmall", x - 5, y + bh + 8, col, 230)
+    local maxHP = ent:GetMaxHealth()
+    local frac = maxHP > 0 and math.Clamp(ent:Health() / maxHP, 0, 1) or 1
+    local barW = math.max(bw + 10, 50)
+    surface.SetDrawColor(0, 0, 0, 150); surface.DrawRect(x - 5, y + bh + 22, barW, 3)
+    surface.SetDrawColor(col.r, col.g, col.b, 220); surface.DrawRect(x - 5, y + bh + 22, barW * frac, 3)
+
+    -- Motion vector: where it will be in half a second
+    local vel = ent:GetVelocity()
+    if vel:Length() > 20 then
+        local a, b = ent:WorldSpaceCenter():ToScreen(), (ent:WorldSpaceCenter() + vel * 0.5):ToScreen()
+        if a.visible and b.visible then
+            surface.SetDrawColor(col.r, col.g, col.b, 160)
+            surface.DrawLine(a.x, a.y, b.x, b.y)
+            surface.DrawRect(b.x - 2, b.y - 2, 4, 4)
+        end
+    end
+
+    -- Weak point: a pulsing diamond on the head (hostiles only)
+    local weak = threat and WeakPoint(ent)
+    local ws = weak and weak:ToScreen()
+    if ws and ws.visible then
+        local r = 5 + math.sin(t * 6) * 1.5
+        surface.SetDrawColor(255, 80, 60, 230)
+        surface.DrawLine(ws.x, ws.y - r, ws.x + r, ws.y); surface.DrawLine(ws.x + r, ws.y, ws.x, ws.y + r)
+        surface.DrawLine(ws.x, ws.y + r, ws.x - r, ws.y); surface.DrawLine(ws.x - r, ws.y, ws.x, ws.y - r)
+        VText("CRIT", "HLRPG_VisorSmall", ws.x + r + 4, ws.y - 6, Color(255, 80, 60), 210)
+    end
+
+    if ent == locked then DrawLockPanel(ply, ent, x + bw + 18, y, threat, allegiance) end
+end
+
 DEF["combine_vision"] = {
-    Describe = function() return "Combine tactical vision: highlights Combine forces" end,
+    Describe = function() return "Overwatch tactical AI: analyses every NPC in sight, rangefinder, compass" end,
     RenderScreen = function()
         DrawColorModify({
-            ["$pp_colour_addr"] = 0,
-            ["$pp_colour_addg"] = 0.02,
-            ["$pp_colour_addb"] = 0.1,
-            ["$pp_colour_brightness"] = -0.05,
-            ["$pp_colour_contrast"] = 1.2,
-            ["$pp_colour_colour"] = 0.4,
+            ["$pp_colour_addr"] = 0, ["$pp_colour_addg"] = 0.01, ["$pp_colour_addb"] = 0.035,
+            ["$pp_colour_brightness"] = -0.04, ["$pp_colour_contrast"] = 1.06, ["$pp_colour_colour"] = 0.65,
+            ["$pp_colour_mulr"] = 0, ["$pp_colour_mulg"] = 0, ["$pp_colour_mulb"] = 0,
         })
     end,
-    HUDPaint = function()
-        surface.SetDrawColor(0, 0, 0, 80)
+    HUDPaint = function(ply)
         local w, h = ScrW(), ScrH()
-        for i = 0, h, 3 do
-            surface.DrawRect(0, i, w, 1)
+        local t = CurTime()
+
+        -- Mask edges
+        visorMats = visorMats or { down = Material("gui/gradient_down"), up = Material("gui/gradient_up"), side = Material("gui/gradient") }
+        surface.SetDrawColor(0, 8, 16, 170)
+        surface.SetMaterial(visorMats.down); surface.DrawTexturedRect(0, 0, w, h * 0.18)
+        surface.SetMaterial(visorMats.up); surface.DrawTexturedRect(0, h * 0.82, w, h * 0.18)
+        surface.SetMaterial(visorMats.side); surface.DrawTexturedRect(0, 0, w * 0.14, h)
+        surface.DrawTexturedRectUV(w * 0.86, 0, w * 0.14, h, 1, 0, 0, 1)
+
+        -- Scanlines and sweep
+        surface.SetDrawColor(0, 0, 0, 22)
+        for y = 0, h, 3 do surface.DrawRect(0, y, w, 1) end
+        surface.SetDrawColor(VISOR.r, VISOR.g, VISOR.b, 10)
+        surface.DrawRect(0, (t % 5) / 5 * h, w, 2)
+
+        Corners(28, 28, w - 56, h - 56, 44, VISOR, 160)
+        DrawCompass(w, ply:EyeAngles().y, 200)
+
+        local targets = ScanVisorTargets(ply)
+        local eye = ply:EyePos()
+
+        local worst, hostiles = 0, 0
+        for _, ent in ipairs(targets) do
+            if IsValid(ent) and Allegiance(ent) == "hostile" then
+                hostiles = hostiles + 1
+                worst = math.max(worst, ThreatLevel(ply, ent))
+            end
         end
 
-        draw.SimpleText("• SYSTEM ONLINE", "DermaDefault", 20, 20, Color(0, 200, 255, 150))
-    end,
-    DrawHalos = function()
-        local targets = ents.FindByClass("npc_combine_s")
-        table.Add(targets, ents.FindByClass("npc_metropolice"))
-        halo.Add(targets, Color(0, 150, 255), 2, 2, 1, true, true)
+        -- Status readout
+        local status = {
+            { "OVERWATCH TACTICAL LINK" .. ((t % 1 < 0.5) and " _" or ""), VISOR },
+            { "UNIT       " .. string.upper(ply:Nick()), VISOR },
+            { "BIOSIGNAL  " .. math.max(ply:Health(), 0) .. "%   ARMOR " .. ply:Armor(), VISOR },
+            { "SECTOR     " .. string.upper(game.GetMap()), VISOR },
+            { "CONTACTS   " .. hostiles .. " HOSTILE  " .. (#targets - hostiles) .. " FRIENDLY", VISOR },
+            { "THREAT     " .. (worst > 0 and THREAT_NAMES[worst] or "NONE"), worst > 0 and THREAT_COLORS[worst] or VISOR },
+        }
+        for i, line in ipairs(status) do
+            VText(line[1], "HLRPG_Visor", 48, 44 + (i - 1) * 16, line[2], i == 1 and 240 or 210)
+        end
+
+        -- Rangefinder on whatever is under the crosshair
+        local tr = ply:GetEyeTrace()
+        local cx, cy = w / 2, h / 2
+        surface.SetDrawColor(VISOR.r, VISOR.g, VISOR.b, 150)
+        surface.DrawRect(cx - 22, cy, 10, 1); surface.DrawRect(cx + 13, cy, 10, 1)
+        surface.DrawRect(cx, cy - 22, 1, 10); surface.DrawRect(cx, cy + 13, 1, 10)
+
+        local locked = IsValid(tr.Entity) and tr.Entity:IsNPC() and tr.Entity or nil
+        VText(string.format("RNG %.1fm", tr.HitPos:Distance(eye) * UNITS_TO_M), "HLRPG_VisorSmall", cx + 30, cy - 10, VISOR, 220)
+        VText(string.format("ELV %+d", math.Round(-ply:EyeAngles().p)), "HLRPG_VisorSmall", cx + 30, cy + 3, VISOR, 170)
+        if locked then
+            local hostile = Allegiance(locked) == "hostile"
+            VText("TGT " .. UnitNames(locked)[1], "HLRPG_VisorSmall", cx + 30, cy + 16, hostile and THREAT_COLORS[ThreatLevel(ply, locked)] or FRIENDLY_COLOR, 210)
+        end
+
+        for _, ent in ipairs(targets) do
+            if IsValid(ent) then DrawUnit(ply, ent, eye, locked, t) end
+        end
     end
 }
 

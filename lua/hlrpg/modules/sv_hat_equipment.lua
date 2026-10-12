@@ -29,14 +29,9 @@ function HLRPG.ToggleHat(ply, hatID)
 end
 
 -- Late joiners need everyone else's hats
-hook.Add("PlayerInitialSpawn", "HLRPG_Sync_Hats", function(newPly)
-    timer.Simple(5, function()
-        if not IsValid(newPly) then return end
-
-        for _, ply in ipairs(player.GetAll()) do
-            if ply ~= newPly and ply.HLRPG_ActiveHat and ply.HLRPG_ActiveHat ~= "none" then
-                SendHat(ply, newPly)
-            end
-        end
-    end)
+-- A client that just finished loading needs every hat, its own included
+hook.Add("HLRPG_ClientReady", "HLRPG_Sync_Hats", function(newPly)
+    for _, ply in ipairs(player.GetAll()) do
+        if ply.HLRPG_ActiveHat and ply.HLRPG_ActiveHat ~= "none" then SendHat(ply, newPly) end
+    end
 end)
