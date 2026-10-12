@@ -102,13 +102,14 @@ HLRPG.Assets = {
         }
     },
 
-    -- Combine role variants: the stock models' alternate skins, some tinted
+    -- Combine role variants: alternate skins or repainted textures (materials/hlrpg/suits/) with role-coloured visors
     ["suit_combine_shotgunner"] = {
         name = "Combine Shotgunner",
-        desc = "Overwatch close-quarters unit.",
+        desc = "Overwatch close-quarters unit. Shell insignia, orange visor.",
         model = "models/player/combine_soldier.mdl",
         hands = "models/weapons/c_arms_combine.mdl",
         skin = 1,
+        material = "hlrpg/suits/combine_shotgunner",
         helmet = true,
         group = "Suits",
         price = 25000,
@@ -120,10 +121,10 @@ HLRPG.Assets = {
     },
     ["suit_combine_demolition"] = {
         name = "Combine Demolitions",
-        desc = "Hazard-striped plating, padded against blasts.",
+        desc = "Khaki demolition armor with hazard-striped sleeves. Padded against blasts.",
         model = "models/player/combine_soldier.mdl",
         hands = "models/weapons/c_arms_combine.mdl",
-        color = Color(255, 225, 120),
+        material = "hlrpg/suits/combine_demolition",
         helmet = true,
         group = "Suits",
         price = 25000,
@@ -135,10 +136,10 @@ HLRPG.Assets = {
     },
     ["suit_combine_recon"] = {
         name = "Combine Recon",
-        desc = "Darkened scout armor. Hard to hit.",
+        desc = "Woodland camo scout armor, red visor. Hard to hit.",
         model = "models/player/combine_soldier.mdl",
         hands = "models/weapons/c_arms_combine.mdl",
-        color = Color(80, 85, 95),
+        material = "hlrpg/suits/combine_recon",
         helmet = true,
         group = "Suits",
         price = 25000,
@@ -150,10 +151,10 @@ HLRPG.Assets = {
     },
     ["suit_combine_medic"] = {
         name = "Combine Medic",
-        desc = "Overwatch field medic, marked in red.",
+        desc = "White field medic armor with red crosses and a green visor.",
         model = "models/player/combine_soldier.mdl",
         hands = "models/weapons/c_arms_combine.mdl",
-        color = Color(255, 110, 110),
+        material = "hlrpg/suits/combine_medic",
         helmet = true,
         group = "Suits",
         price = 30000,
@@ -179,7 +180,7 @@ HLRPG.Assets = {
         }
     },
 
-    -- Elite variants: the Elite model with recoloured textures (materials/hlrpg/suits/), each with its own role
+    -- Elite variants: repainted Elite textures (materials/hlrpg/suits/), each with its own role colour
     ["suit_elite_vanguard"] = {
         name = "Elite Vanguard",
         desc = "Blood-red assault plating.",
