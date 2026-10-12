@@ -23,6 +23,7 @@
 --   Move(ply, value, mv)                    -> edit movement (velocity) before it's processed
 -- Client only, for the local player:
 --   RenderScreen(ply, value) / DrawHalos(ply, value) / HUDPaint(ply, value)
+--   HideHUD = { CHudHealth = true, ... }     -> HUD elements hidden while the ability applies (not a function)
 
 HLRPG.Abilities = {}
 
@@ -609,10 +610,24 @@ local visorTargets, nextTargetScan, visorMats = {}, 0, nil
 if CLIENT then
     surface.CreateFont("HLRPG_Visor", { font = "Lucida Console", size = 13, weight = 600, antialias = true })
     surface.CreateFont("HLRPG_VisorSmall", { font = "Lucida Console", size = 11, weight = 500, antialias = true })
+    surface.CreateFont("HLRPG_VisorBig", { font = "Lucida Console", size = 30, weight = 700, antialias = true })
+    surface.CreateFont("HLRPG_VisorHuge", { font = "Consolas", size = 46, weight = 800, antialias = true })
 end
 
--- Text with a dark drop shadow so it reads on bright backgrounds
+-- Visor damage, 0 (fine) .. 1 (suit power empty); set each frame from SuitGlitch
+local visorGlitch, jitterX, jitterY = 0, 0, 0
+local GLITCH_GLYPHS = { "#", "%", "&", "@", "$", "*", "!", "?", "/", "|", "0", "1" }
+
+local function Corrupt(text)
+    if visorGlitch <= 0 then return text end
+    return (string.gsub(text, "%S", function(c)
+        if math.random() < visorGlitch * 0.06 then return GLITCH_GLYPHS[math.random(#GLITCH_GLYPHS)] end
+    end))
+end
+
+-- Text with a dark drop shadow so it reads on bright backgrounds; shakes and corrupts while the visor is damaged
 local function VText(text, font, x, y, col, alpha, align)
+    if visorGlitch > 0 then text, x, y = Corrupt(text), x + jitterX, y + jitterY end
     draw.SimpleText(text, font, x + 1, y + 1, Color(0, 0, 0, alpha * 0.8), align or TEXT_ALIGN_LEFT)
     draw.SimpleText(text, font, x, y, ColorAlpha(col, alpha), align or TEXT_ALIGN_LEFT)
 end
@@ -767,18 +782,215 @@ local function DrawUnit(ply, ent, eye, locked, t)
     if ent == locked then DrawLockPanel(ply, ent, x + bw + 18, y, threat, allegiance) end
 end
 
+-- Overwatch comm feed: random dispatch traffic, typed out in the upper right and pushed out by newer lines
+local COMM_TEMPLATES = {
+    "DISPATCH > ALL UNITS: ANTI-CITIZEN ONE SIGHTED IN SECTOR {S}",
+    "OVERWATCH > HUNT DOWN AND AMPUTATE: POST {N}",
+    "DISPATCH > FREEMAN ON THE LOOSE. ALL TEAMS RESPOND",
+    "OVERWATCH > REBEL BASE {N} CAPTURED. SANITIZE AND HOLD",
+    "OVERWATCH > RESISTANCE CELL {N} CONTAINED",
+    "DISPATCH > NON-CITIZEN ACTIVITY REPORTED, SECTOR {S}",
+    "OVERWATCH > PROTECTION TEAM {T}: HOLD POSITION AT {S}-{N}",
+    "OVERWATCH > STABILIZATION TEAM {T} DEPLOYED TO CANAL {N}",
+    "DISPATCH > INOCULATE, CAUTERIZE, STERILIZE: BLOCK {N}",
+    "OVERWATCH > AIRWATCH: GUNSHIP {N} EN ROUTE TO SECTOR {S}",
+    "DISPATCH > CIVIL PROTECTION: APPLY PRESSURE AT CHECKPOINT {N}",
+    "OVERWATCH > SUSPECT {N}{N} PROCESSED. RELOCATION COMPLETE",
+    "OVERWATCH > EXOGEN BREACH AT PERIMETER {S}{N}. CONTAIN",
+    "DISPATCH > CITIZEN REMINDER: INACTION IS CONSPIRACY",
+    "OVERWATCH > SECTOR {S} NOT SECURE. LOCKDOWN IN EFFECT",
+    "OVERWATCH > UNIT {T}-{N} BIOSIGNAL LOST. RESPOND",
+    "DISPATCH > ANTLION INCURSION, OUTLANDS GRID {N}",
+    "OVERWATCH > NOVA PROSPEKT TRANSFER {N}{N} AUTHORIZED",
+    "DISPATCH > ATTENTION GROUND UNITS: MISCOUNT DETECTED, BLOCK {N}",
+    "OVERWATCH > CODE 7: RESTRICT AND PURGE, SECTOR {S}",
+    "DISPATCH > ANTI-CITIZEN COLLABORATION ON RAIL LINE {N}",
+    "OVERWATCH > SCANNER {N}{N} DEPLOYED. AERIAL SWEEP {S}",
+    "OVERWATCH > VORTIGAUNT ACTIVITY CONFIRMED. EXPUNGE",
+    "DISPATCH > ALL UNITS: ISOLATE, ISOLATE, ISOLATE",
+}
+local COMM_TEAMS = { "ECHO", "VICE", "JURY", "RANGER", "UNION", "GRID", "STAB", "HELIX", "RAZOR", "SAVAGE" }
+local COMM_MAX, COMM_TYPE_SPEED = 6, 45
+local commLog, nextComm = {}, 0
+
+local function NewCommLine()
+    local text = table.Random(COMM_TEMPLATES)
+    text = string.gsub(text, "{S}", function() return string.char(math.random(65, 90)) end)
+    text = string.gsub(text, "{N}", function() return tostring(math.random(1, 49)) end)
+    text = string.gsub(text, "{T}", function() return table.Random(COMM_TEAMS) end)
+    return { text = "[" .. os.date("%H:%M:%S") .. "] " .. text, born = CurTime() }
+end
+
+local function DrawCommFeed(w, t)
+    if t >= nextComm then
+        nextComm = t + math.Rand(3.5, 9)
+        table.insert(commLog, NewCommLine())
+        if #commLog > COMM_MAX then table.remove(commLog, 1) end
+    end
+
+    local x, y = w - 52, 44
+    for i = #commLog, 1, -1 do
+        local line = commLog[i]
+        local age = #commLog - i                                          -- 0 for the newest line
+        local alpha = 95 * (1 - age / (COMM_MAX + 1)) * math.Clamp(1 - (t - line.born - 40) / 10, 0, 1)
+        local shown = math.min(#line.text, math.floor((t - line.born) * COMM_TYPE_SPEED))
+        local text = string.sub(line.text, 1, shown)
+        if shown < #line.text then text = text .. "_" end
+        if alpha > 1 then VText(text, "HLRPG_VisorSmall", x, y + age * 14, VISOR, alpha, TEXT_ALIGN_RIGHT) end
+    end
+end
+
+-- Damage to the visor follows suit power (armor): none at 40% or more, worst at 0%
+local GLITCH_START = 0.4
+local VISOR_MIN_FADE = 0.3 -- how visible the visor's elements still are at 0% suit power
+local ANALYSIS_OFF = 0.2   -- suit power at which unit analysis (brackets, tags, weak points) is gone
+
+local function SuitGlitch(ply)
+    local maxArmor = ply:GetMaxArmor()
+    local frac = maxArmor > 0 and ply:Armor() / maxArmor or 0
+    return math.Clamp((GLITCH_START - frac) / GLITCH_START, 0, 1)
+end
+
+-- A parallelogram leaning right; slant is how far the top edge is shifted
+local function Slant(x, y, w, h, slant)
+    return { { x = x + slant, y = y }, { x = x + w, y = y }, { x = x + w - slant, y = y + h }, { x = x, y = y + h } }
+end
+
+local function SlantBar(x, y, w, h, frac, col, alpha)
+    x, y = x + jitterX, y + jitterY
+    draw.NoTexture()
+    surface.SetDrawColor(0, 4, 10, 170)
+    surface.DrawPoly(Slant(x, y, w, h, h))
+    if frac > 0 then
+        surface.SetDrawColor(col.r, col.g, col.b, alpha)
+        surface.DrawPoly(Slant(x, y, math.max(w * frac, h + 1), h, h))
+    end
+    surface.SetDrawColor(col.r, col.g, col.b, 140)
+    for i = 0, 10 do
+        surface.DrawRect(x + h + (w - h) * i / 10 - 1, y - (i % 5 == 0 and 7 or 4), 1, i % 5 == 0 and 5 or 2)
+    end
+end
+
+-- A large readout: label, value, slanted bar. Turns red and pulses below 25%.
+local function DrawVital(x, y, label, value, max, t)
+    local frac = max > 0 and math.Clamp(value / max, 0, 1) or 0
+    local critical = frac < 0.25
+    local col = critical and THREAT_COLORS[3] or VISOR
+    local alpha = critical and (160 + math.abs(math.sin(t * 5)) * 95) or 245
+
+    surface.SetDrawColor(col.r, col.g, col.b, alpha)
+    surface.DrawRect(x - 12 + jitterX, y + 2 + jitterY, 3, 54)
+    VText(label, "HLRPG_Visor", x, y, col, 235)
+    VText(string.format("%03d", math.max(math.floor(value), 0)), "HLRPG_VisorHuge", x - 2, y + 12, col, alpha)
+    VText("/" .. max, "HLRPG_Visor", x + 84, y + 40, col, 170)
+    VText(math.Round(frac * 100) .. "%", "HLRPG_Visor", x + 450, y + 26, col, 220, TEXT_ALIGN_RIGHT)
+    SlantBar(x + 130, y + 28, 270, 16, frac, col, alpha)
+end
+
+local function DrawAux(ply, x, y)
+    local power = ply.GetLambdaSuitPower and ply:GetLambdaSuitPower() or 100
+    local col = power < 25 and THREAT_COLORS[2] or VISOR
+    VText("AUX POWER", "HLRPG_VisorSmall", x, y, col, 220)
+    VText(math.Round(power) .. "%", "HLRPG_VisorSmall", x + 450, y, col, 200, TEXT_ALIGN_RIGHT)
+    SlantBar(x + 130, y + 2, 270, 7, power / 100, col, 230)
+end
+
+-- Ammo for the held weapon, bottom right
+local function DrawAmmo(ply, w, h)
+    local wep = ply:GetActiveWeapon()
+    if not IsValid(wep) or ply:InVehicle() then return end
+    local primary, secondary = wep:GetPrimaryAmmoType(), wep:GetSecondaryAmmoType()
+    if primary < 0 and secondary < 0 then return end
+
+    local rx, y = w - 52, h - 210
+    local name = string.upper(language.GetPhrase(wep:GetPrintName()))
+    local clip, maxClip = wep:Clip1(), wep:GetMaxClip1()
+    local reserve = primary >= 0 and ply:GetAmmoCount(primary) or 0
+    local empty = (clip == 0) or (clip < 0 and reserve == 0)
+    local col = empty and THREAT_COLORS[3] or VISOR
+
+    surface.SetDrawColor(col.r, col.g, col.b, 245)
+    surface.DrawRect(rx + 9 + jitterX, y + 2 + jitterY, 3, 54)
+    VText(name, "HLRPG_Visor", rx, y, col, 235, TEXT_ALIGN_RIGHT)
+    if clip >= 0 then
+        VText(string.format("%03d", clip), "HLRPG_VisorHuge", rx - 70, y + 12, col, 245, TEXT_ALIGN_RIGHT)
+        VText("/" .. reserve, "HLRPG_Visor", rx, y + 40, col, 190, TEXT_ALIGN_RIGHT)
+        SlantBar(rx - 290, y + 66, 290, 10, maxClip > 0 and clip / maxClip or 0, col, 235)
+    else
+        VText(string.format("%03d", reserve), "HLRPG_VisorHuge", rx, y + 12, col, 245, TEXT_ALIGN_RIGHT)
+    end
+    if secondary >= 0 then
+        VText("ALT  x" .. ply:GetAmmoCount(secondary), "HLRPG_Visor", rx, y + 84, VISOR, 210, TEXT_ALIGN_RIGHT)
+    end
+end
+
+-- Screen damage: static, colour bars and a warning (the tearing happens in RenderScreen)
+local function DrawGlitchOverlay(ply, w, h, t)
+    local g = visorGlitch
+    if g <= 0 then return end
+    for _ = 1, math.floor(g * 90) do
+        local v = math.random(40, 220)
+        surface.SetDrawColor(v, v, v, math.random(15, 70 * g + 15))
+        surface.DrawRect(math.random(0, w), math.random(0, h), math.random(2, 7), math.random(1, 3))
+    end
+    if math.random() < g * 0.3 then
+        local c = math.random() < 0.5 and THREAT_COLORS[3] or VISOR
+        surface.SetDrawColor(c.r, c.g, c.b, 25 + g * 35)
+        surface.DrawRect(0, math.random(0, h), w, math.random(2, 8))
+    end
+    if g > 0.35 and (t * 2) % 1 < 0.6 then
+        local maxArmor = ply:GetMaxArmor()
+        local pct = maxArmor > 0 and math.Round(ply:Armor() / maxArmor * 100) or 0
+        VText("! SUIT POWER " .. pct .. "% - VISOR INTEGRITY COMPROMISED", "HLRPG_Visor", w / 2, 112, THREAT_COLORS[3], 230, TEXT_ALIGN_CENTER)
+    end
+end
+
+local tearMat
+
 DEF["combine_vision"] = {
+    HideHUD = { CHudHealth = true, CHudBattery = true, CHudAmmo = true, CHudSecondaryAmmo = true },
     Describe = function() return "Overwatch tactical AI: analyses every NPC in sight, rangefinder, compass" end,
-    RenderScreen = function()
+    RenderScreen = function(ply)
+        -- Steady brightness on purpose: the damage effects never flash the whole screen dark
+        local g = SuitGlitch(ply)
         DrawColorModify({
-            ["$pp_colour_addr"] = 0, ["$pp_colour_addg"] = 0.01, ["$pp_colour_addb"] = 0.035,
-            ["$pp_colour_brightness"] = -0.04, ["$pp_colour_contrast"] = 1.06, ["$pp_colour_colour"] = 0.65,
+            ["$pp_colour_addr"] = 0, ["$pp_colour_addg"] = 0.01, ["$pp_colour_addb"] = 0.035 + g * 0.03,
+            ["$pp_colour_brightness"] = -0.04, ["$pp_colour_contrast"] = 1.06 + g * 0.2,
+            ["$pp_colour_colour"] = 0.65 - g * 0.45,
             ["$pp_colour_mulr"] = 0, ["$pp_colour_mulg"] = 0, ["$pp_colour_mulb"] = 0,
         })
+
+        -- Tearing: strips of this frame, copied out first, redrawn shifted sideways (never blank)
+        if g > 0 and math.random() < 0.1 + g * 0.5 then
+            local w, h = ScrW(), ScrH()
+            render.UpdateScreenEffectTexture()
+            tearMat = tearMat or CreateMaterial("hlrpg_visor_tear", "UnlitGeneric", { ["$basetexture"] = "_rt_FullFrameFB", ["$ignorez"] = 1 })
+            tearMat:SetTexture("$basetexture", render.GetScreenEffectTexture())
+            cam.Start2D()
+            surface.SetMaterial(tearMat)
+            surface.SetDrawColor(255, 255, 255, 255)
+            for _ = 1, math.random(1, 1 + math.floor(g * 6)) do
+                local y0 = math.random(0, h)
+                local th = math.random(3, 8 + math.floor(g * 40))
+                local dx = (math.random() < 0.5 and -1 or 1) * math.random(4, 8 + math.floor(g * 70))
+                surface.DrawTexturedRectUV(dx, y0, w, th, 0, y0 / h, 1, (y0 + th) / h)
+            end
+            cam.End2D()
+        end
     end,
     HUDPaint = function(ply)
         local w, h = ScrW(), ScrH()
         local t = CurTime()
+        visorGlitch = SuitGlitch(ply)
+        if visorGlitch > 0 and math.random() < visorGlitch * 0.4 then
+            jitterX, jitterY = math.random(-3, 3), math.random(-2, 2)
+        else
+            jitterX, jitterY = 0, 0
+        end
+
+        -- The whole visor fades with suit power (down to VISOR_MIN_FADE at 0%); the damage overlay and its
+        -- warning are drawn after the reset below, at full strength
+        surface.SetAlphaMultiplier(1 - visorGlitch * (1 - VISOR_MIN_FADE))
 
         -- Mask edges
         visorMats = visorMats or { down = Material("gui/gradient_down"), up = Material("gui/gradient_up"), side = Material("gui/gradient") }
@@ -796,6 +1008,11 @@ DEF["combine_vision"] = {
 
         Corners(28, 28, w - 56, h - 56, 44, VISOR, 160)
         DrawCompass(w, ply:EyeAngles().y, 200)
+        DrawCommFeed(w, t)
+        DrawVital(60, h - 236, "BIOSIGNAL", ply:Health(), ply:GetMaxHealth(), t)
+        DrawVital(60, h - 164, "SUIT POWER", ply:Armor(), ply:GetMaxArmor(), t)
+        DrawAux(ply, 60, h - 92)
+        DrawAmmo(ply, w, h)
 
         local targets = ScanVisorTargets(ply)
         local eye = ply:EyePos()
@@ -812,7 +1029,7 @@ DEF["combine_vision"] = {
         local status = {
             { "OVERWATCH TACTICAL LINK" .. ((t % 1 < 0.5) and " _" or ""), VISOR },
             { "UNIT       " .. string.upper(ply:Nick()), VISOR },
-            { "BIOSIGNAL  " .. math.max(ply:Health(), 0) .. "%   ARMOR " .. ply:Armor(), VISOR },
+            { "BIOSIGNAL  " .. math.max(ply:Health(), 0) .. "%   SUIT POWER " .. ply:Armor(), VISOR },
             { "SECTOR     " .. string.upper(game.GetMap()), VISOR },
             { "CONTACTS   " .. hostiles .. " HOSTILE  " .. (#targets - hostiles) .. " FRIENDLY", VISOR },
             { "THREAT     " .. (worst > 0 and THREAT_NAMES[worst] or "NONE"), worst > 0 and THREAT_COLORS[worst] or VISOR },
@@ -836,9 +1053,21 @@ DEF["combine_vision"] = {
             VText("TGT " .. UnitNames(locked)[1], "HLRPG_VisorSmall", cx + 30, cy + 16, hostile and THREAT_COLORS[ThreatLevel(ply, locked)] or FRIENDLY_COLOR, 210)
         end
 
-        for _, ent in ipairs(targets) do
-            if IsValid(ent) then DrawUnit(ply, ent, eye, locked, t) end
+        -- Unit analysis needs more suit power than the rest: it fades out between 40% and 20%
+        local maxArmor = ply:GetMaxArmor()
+        local suitFrac = maxArmor > 0 and ply:Armor() / maxArmor or 0
+        local analysis = math.Clamp((suitFrac - ANALYSIS_OFF) / (GLITCH_START - ANALYSIS_OFF), 0, 1)
+        if analysis > 0 then
+            local base = surface.GetAlphaMultiplier()
+            surface.SetAlphaMultiplier(base * analysis)
+            for _, ent in ipairs(targets) do
+                if IsValid(ent) then DrawUnit(ply, ent, eye, locked, t) end
+            end
+            surface.SetAlphaMultiplier(base)
         end
+
+        surface.SetAlphaMultiplier(1)
+        DrawGlitchOverlay(ply, w, h, t)
     end
 }
 
