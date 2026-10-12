@@ -53,35 +53,30 @@ HLRPG.Achievements = {
         name = "Vorticough",
         desc = "Knowing it all doesnt mean you can sing.",
         kills = 20,
-        rewardItem = "pet_vortigaunt",
         isGlobal = true
     },
     ["HL2_KEEP_OFF_SAND"] = {
         name = "Keep Off The Sand",
         desc = "Avoid the sand traps",
         kills = 60,
-        icon = "resources/icons/achievements/hl2_keep_off_sand.png",
         isGlobal = true
     },
     ["HL2_LAMBDA_LOCATOR"] = {
         name = "Lambda Locator",
         desc = "Find all lambda caches",
         kills = 500,
-        icon = "resources/icons/achievements/hl2_lambda_locator.png",
         isGlobal = false
     },
     ["HL2_ANCHORS_AWEIGH"] = {
         name = "Anchors Aweigh",
         desc = "Ride the boat",
         kills = 8,
-        icon = "resources/icons/achievements/hl2_anchors_aweigh.png",
         isGlobal = true
     },
     ["HL2_HEAVY_WEAPONS"] = {
         name = "Heavy Weapons",
         desc = "Get the mounted gun",
         kills = 8,
-        icon = "resources/icons/achievements/hl2_heavy_weapons.png",
         isGlobal = true
     },
     ["HL2_REVENGE"] = {
@@ -89,35 +84,30 @@ HLRPG.Achievements = {
         desc = "Defeat the Chopper",
         kills = 30,
         rewardItem = "hat_helibomb",
-        icon = "resources/icons/achievements/hl2_revenge.png",
         isGlobal = true
     },
     ["HL2_ZERO_POINT_ENERGY"] = {
         name = "Zero Point Energy",
         desc = "Gravity gun acquired",
         kills = 8,
-        icon = "resources/icons/achievements/hl2_zero_point_energy.png",
         isGlobal = true
     },
     ["HL2_BLAST_FROM_PAST"] = {
         name = "Blast From The Past",
         desc = "Use the old HEV suit charger",
         kills = 20,
-        icon = "resources/icons/achievements/hl2_blast_from_past.png",
         isGlobal = true
     },
     ["HL2_TWO_POINTS"] = {
         name = "Two Points",
         desc = "Score a basket with the rollermine",
         kills = 20,
-        icon = "resources/icons/achievements/hl2_two_points.png",
         isGlobal = true
     },
     ["HL2_HALLOWED_GROUND"] = {
         name = "Hallowed Ground",
         desc = "Reach the graveyard",
         kills = 10,
-        icon = "resources/icons/achievements/hl2_hallowed_ground.png",
         isGlobal = true
     },
 }
@@ -243,4 +233,11 @@ for groupID, group in pairs(HLRPG.KillCounterGroups) do
             kills = tier.kills,
         }
     end
+end
+
+-- Icons: an achievement without an explicit icon uses materials/resources/icons/achievements/<id>.jpg if it
+-- exists (Valve's official icons, downloaded from Steam). sv_resources.lua sends them to joining players.
+for id, ach in pairs(HLRPG.Achievements) do
+    local path = "resources/icons/achievements/" .. string.lower(id) .. ".jpg"
+    if not ach.icon and file.Exists("materials/" .. path, "GAME") then ach.icon = path end
 end

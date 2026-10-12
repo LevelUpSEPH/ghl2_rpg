@@ -1,7 +1,8 @@
 -- hlrpg/modules/sv_campaign_runs.lua
 -- Tracks each player's run through the current campaign (core/sh_runs.lua). A run is saved per player as
--- { campaign, index, minDifficulty, died } so it survives map changes; disconnecting deletes it. The outro
--- credits on the campaign's last map complete every valid run.
+-- { campaign, index, minDifficulty, died, elapsed } so it survives map changes; disconnecting deletes it.
+-- The outro credits on the campaign's last map complete every valid run.
+-- elapsed is the run's play time in seconds, up to the current map; map loading isn't counted.
 
 local RUN_KEY = "HLRPG_CampaignRun"
 
@@ -37,6 +38,26 @@ local function SaveRun(ply, run)
     end
 end
 
+-- Play time so far: earlier maps plus time on this one since the player loaded in
+local function GetRunTime(ply, run)
+    return (run.elapsed or 0) + CurTime() - (ply.HLRPG_RunClock or CurTime())
+end
+
+-- Banks this map's time into the saved run, before the map changes
+local function BankRunTime()
+    for _, ply in ipairs(player.GetAll()) do
+        local run = ply.HLRPG_Run
+        if run then
+            run.elapsed = GetRunTime(ply, run)
+            ply.HLRPG_RunClock = CurTime()
+            SaveRun(ply, run)
+        end
+    end
+end
+
+hook.Add("LambdaPreChangelevel", "HLRPG_RunTime", BankRunTime)
+hook.Add("ShutDown", "HLRPG_RunTime", BankRunTime)
+
 local function Notify(ply, message)
     ply:ChatPrint("[RUN] " .. message)
 end
@@ -57,7 +78,7 @@ local function TrackDifficulty(run, campaign, mapList)
 end
 
 local function DescribeProgress(run, campaign, mapList)
-    local status = string.format("%s run: map %d/%d", campaign.name, run.index, #mapList)
+    local status = string.format("%s run: map %d/%d, %s", campaign.name, run.index, #mapList, HLRPG.FormatTime(run.elapsed))
     if not run.died then status = status .. ", no deaths" end
     if run.minDifficulty then
         return status .. ", counting difficulty: " .. HLRPG.DifficultyScales[run.minDifficulty].name
@@ -91,6 +112,7 @@ local function UpdateRun(ply)
     end
 
     if run then TrackDifficulty(run, campaign, mapList) end
+    ply.HLRPG_RunClock = CurTime()
     SaveRun(ply, run)
 
     if started then
@@ -144,6 +166,7 @@ hook.Add("AcceptInput", "HLRPG_CampaignRunEnd", function(ent, input)
     for _, ply in ipairs(player.GetAll()) do
         local run = ply.HLRPG_Run
         if run and run.campaign == campaign.id and run.index == #mapList and run.minDifficulty then
+            hook.Run("HLRPG_RunFinished", ply, campaign, GetRunTime(ply, run), run.minDifficulty)
             HLRPG.AwardAchievement(ply, HLRPG.GetCampaignRunAchievement(campaign.id, run.minDifficulty))
             if not run.died then
                 HLRPG.AwardAchievement(ply, HLRPG.GetDeathlessRunAchievement(campaign.id))

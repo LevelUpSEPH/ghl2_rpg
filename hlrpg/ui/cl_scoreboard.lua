@@ -4,7 +4,7 @@
 local ACCENT = Color(255, 180, 0)
 local HEADER_TEXT = Color(150, 150, 150)
 
--- Navigation: equal-sized tiles, NAV_PER_ROW per row; a shorter last row is centered.
+-- Navigation: equal-sized tiles in two rows; a shorter last row is centered.
 -- Each page closes the scoreboard and opens on its own, so it stays open after TAB is released.
 local NAV_PAGES = {
     { label = "SHOP",         icon = "icon16/cart.png",              open = function() HLRPG.OpenPlayerHub() end },
@@ -13,13 +13,14 @@ local NAV_PAGES = {
       badge = function() return HLRPG.GetFreeStatPoints(LocalPlayer()) end },
     { label = "ACHIEVEMENTS", icon = "icon16/award_star_gold_1.png", open = function() HLRPG.RequestMenu("achievements") end },
     { label = "LAMBDAS",      icon = "icon16/map.png",               open = function() HLRPG.RequestMenu("lambdas") end },
+    { label = "LEADERBOARDS", icon = "icon16/time.png",              open = function() HLRPG.RequestMenu("leaderboards") end },
     { label = "VOTE",         icon = "icon16/thumb_up.png",          open = function() HLRPG.OpenVoteMenu() end },
     { label = "VEHICLE",      icon = "icon16/car.png",               open = function() HLRPG.RequestMenu("vehicle") end },
     { label = "DIFFICULTY",   icon = "icon16/chart_bar.png",         open = function() HLRPG.OpenDifficultyMenu() end },
 }
 
 -- Layout
-local NAV_PER_ROW, NAV_TILE_H, NAV_GAP = 4, 50, 6
+local NAV_PER_ROW, NAV_TILE_H, NAV_GAP = math.ceil(#NAV_PAGES / 2), 50, 6
 local NAV_ROWS = math.ceil(#NAV_PAGES / NAV_PER_ROW)
 local NAV_Y = 82
 local NAV_BOTTOM = NAV_Y + NAV_ROWS * NAV_TILE_H + (NAV_ROWS - 1) * NAV_GAP

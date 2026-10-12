@@ -94,31 +94,6 @@ HLRPG.PetData = {
                 xpRequired = 3000, xpIncreasePerLevel = 700
             }
         }
-    },
-    ["pet_vortigaunt"] = {
-        Evolutions = {
-            [1] = {
-                class = "npc_vortigaunt", name = "Vortigaunt",
-                modelScale = 0.8,
-                baseHealth = 200, healthPerLevel = 20,
-                dmgMultiplier = 1.0,
-                xpRequired = 15, xpIncreasePerLevel = 5
-            },
-            [8] = {
-                class = "npc_vortigaunt", name = "Elder Vortigaunt",
-                modelScale = 1,
-                baseHealth = 800, healthPerLevel = 80,
-                dmgMultiplier = 2.5,
-                xpRequired = 60, xpIncreasePerLevel = 15
-            },
-            [16] = {
-                class = "npc_vortigaunt", name = "Vortigaunt Champion",
-                modelScale = 1.5,
-                baseHealth = 3000, healthPerLevel = 250,
-                dmgMultiplier = 5.0,
-                xpRequired = 200, xpIncreasePerLevel = 50
-            }
-        }
     }
 }
 

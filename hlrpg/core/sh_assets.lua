@@ -153,12 +153,6 @@ HLRPG.Assets = {
         price = 3500,
         currency = "XP"
     },
-    ["pet_vortigaunt"] = {
-        name = "Vortigaunt Pet",
-        model = "models/vortigaunt.mdl",
-        group = "Pets",
-        unbuyable = true
-    },
 
     ["hat_metrocop"] = {
         name = "Metrocop Helmet",
@@ -431,3 +425,9 @@ HLRPG.Assets = {
         abilities = { { id = "ammo_capacity", value = 0.5 } }
     }
 }
+
+-- Display name of an item ID ("" for none, the ID itself if the item no longer exists)
+function HLRPG.GetItemName(itemID)
+    if not itemID or itemID == "" then return "" end
+    return HLRPG.Assets[itemID] and HLRPG.Assets[itemID].name or itemID
+end

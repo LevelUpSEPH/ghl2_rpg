@@ -81,7 +81,7 @@ local function AddAchievementRow(scroll, ach, isUnlocked, counters)
         draw.SimpleText("+" .. string.Comma(xp) .. " XP", "DermaDefaultBold", w - 15, 15, isUnlocked and COL_XP or COL_LOCKED, TEXT_ALIGN_RIGHT)
 
         if ach.rewardItem then
-            local rewardText = isUnlocked and ("REWARD: " .. ach.rewardItem) or "REWARD: ???"
+            local rewardText = isUnlocked and ("REWARD: " .. HLRPG.GetItemName(ach.rewardItem)) or "REWARD: ???"
             draw.SimpleText(rewardText:upper(), "DermaDefault", w - 15, 35, isUnlocked and Color(255, 200, 50) or COL_LOCKED, TEXT_ALIGN_RIGHT)
         end
 

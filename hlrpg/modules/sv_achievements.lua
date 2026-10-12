@@ -32,7 +32,7 @@ function HLRPG.AwardAchievement(ply, achID)
         net.WriteString(ach.name)
         net.WriteString(ach.desc or "")
         net.WriteInt(xp, 32)
-        net.WriteString(ach.rewardItem or "")
+        net.WriteString(HLRPG.GetItemName(ach.rewardItem))
         net.WriteString(ach.icon or "")
     net.Send(ply)
 
@@ -90,7 +90,12 @@ function HLRPG.AddCollectionItem(ply, collection, item, quiet)
     found[item] = true
     ply:SaveCounters()
     if not quiet then
-        ply:ChatPrint("[ACH] Found " .. table.Count(found) .. " for " .. collection:gsub("_", " ") .. ".")
+        -- "[ACH] Pinata Party: 3 / 9"
+        for _, ach in pairs(HLRPG.Achievements) do
+            if ach.counter == collection then
+                ply:ChatPrint(string.format("[ACH] %s: %d / %d", ach.name, table.Count(found), ach.goal))
+            end
+        end
     end
     CheckCounterAchievements(ply, collection)
 end
@@ -211,6 +216,20 @@ function HLRPG.OnAchievementEvent(event, activator)
         end
     end
 end
+
+-- A challenge has to be played through in one go: leaving drops it, so rejoining later can't finish it
+hook.Add("PlayerDisconnected", "HLRPG_ChallengeBreak", function(ply)
+    if not ply.HLRPG_Counters then return end
+
+    local changed = false
+    for key in pairs(ply.HLRPG_Counters) do
+        if string.StartWith(key, "challenge_") then
+            ply.HLRPG_Counters[key] = nil
+            changed = true
+        end
+    end
+    if changed then ply:SaveCounters() end
+end)
 
 -- Achievements for finishing a campaign (completeCampaign), when its ending credits roll (sv_campaign_runs.lua)
 hook.Add("HLRPG_CampaignCompleted", "HLRPG_CampaignAchievements", function(campaignID)

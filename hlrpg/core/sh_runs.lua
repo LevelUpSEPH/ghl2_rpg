@@ -24,6 +24,11 @@ function HLRPG.GetDeathlessRunAchievement(campaignID)
     return "RUN_" .. campaignID:upper() .. "_DEATHLESS"
 end
 
+-- Icons are generated per achievement: materials/resources/icons/achievements/run_<campaign>_<difficulty|deathless>.jpg
+local function GetRunIcon(achID)
+    return "resources/icons/achievements/" .. string.lower(achID) .. ".jpg"
+end
+
 for campaignIndex, campaign in ipairs(HLRPG.Campaigns) do
     for difficulty, scale in ipairs(HLRPG.DifficultyScales) do
         HLRPG.Achievements[HLRPG.GetCampaignRunAchievement(campaign.id, difficulty)] = {
@@ -33,6 +38,7 @@ for campaignIndex, campaign in ipairs(HLRPG.Campaigns) do
             sort = string.format("3 %d %d", campaignIndex, difficulty),
             kills = math.Round(HLRPG.CampaignRunKills[difficulty] * campaign.rewardScale),
             rewardItem = campaign.rewardItems and campaign.rewardItems[difficulty],
+            icon = GetRunIcon(HLRPG.GetCampaignRunAchievement(campaign.id, difficulty)),
         }
     end
 
@@ -42,5 +48,6 @@ for campaignIndex, campaign in ipairs(HLRPG.Campaigns) do
         category = "general",
         sort = string.format("3 %d 9", campaignIndex),
         kills = math.Round(HLRPG.CampaignDeathlessKills * campaign.rewardScale),
+        icon = GetRunIcon(HLRPG.GetDeathlessRunAchievement(campaign.id)),
     }
 end
