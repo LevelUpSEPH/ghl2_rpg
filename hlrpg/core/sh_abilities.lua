@@ -113,6 +113,13 @@ DEF["damage_resist"] = {
     end
 }
 
+DEF["blast_resist"] = {
+    Describe = function(value) return "Takes " .. math.Round(value * 100) .. "% less explosion damage" end,
+    OnTakeDamage = function(ply, value, attacker, dmginfo)
+        if dmginfo:IsExplosionDamage() then dmginfo:ScaleDamage(1 - value) end
+    end
+}
+
 DEF["poison_immunity"] = {
     Describe = function() return "Immune to poison" end,
     OnTakeDamage = function(ply, value, attacker, dmginfo)
@@ -171,6 +178,21 @@ DEF["damage_bonus"] = {
     Describe = function(value) return "+" .. math.Round(value * 100) .. "% damage" end,
     OnDealDamage = function(ply, value, target, dmginfo)
         dmginfo:ScaleDamage(1 + value)
+    end
+}
+
+DEF["shotgun_damage"] = {
+    Describe = function(value) return "+" .. math.Round(value * 100) .. "% shotgun damage" end,
+    OnDealDamage = function(ply, value, target, dmginfo)
+        local wep = ply:GetActiveWeapon()
+        if IsValid(wep) and wep:GetClass() == "weapon_shotgun" then dmginfo:ScaleDamage(1 + value) end
+    end
+}
+
+DEF["melee_damage"] = {
+    Describe = function(value) return "+" .. math.Round(value * 100) .. "% melee damage" end,
+    OnDealDamage = function(ply, value, target, dmginfo)
+        if bit.band(dmginfo:GetDamageType(), bit.bor(DMG_CLUB, DMG_SLASH)) ~= 0 then dmginfo:ScaleDamage(1 + value) end
     end
 }
 

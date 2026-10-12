@@ -11,7 +11,6 @@ HLRPG.Achievements = {
         name = "Defiant",
         desc = "Go against norms",
         kills = 8,
-        rewardItem = "hat_metrocop",
         icon = "resources/icons/achievements/hl2_defiant.png",
         isGlobal = true
     },
@@ -59,6 +58,7 @@ HLRPG.Achievements = {
         name = "Keep Off The Sand",
         desc = "Avoid the sand traps",
         kills = 60,
+        rewardItem = "pet_antlion",
         isGlobal = true
     },
     ["HL2_LAMBDA_LOCATOR"] = {
@@ -199,7 +199,7 @@ HLRPG.Achievements["GEN_DEATHS_50"] = {
     kills = 10,
 }
 
--- Enemy groups for the kill achievements
+-- Enemy groups for the kill achievements. rewards = { [goal] = itemID } gives an item with that tier.
 HLRPG.KillCounterGroups = {
     zombie = { name = "Zombie", plural = "zombies", classes = {
         "npc_zombie", "npc_zombie_torso", "npc_fastzombie", "npc_fastzombie_torso", "npc_poisonzombie", "npc_zombine",
@@ -207,7 +207,7 @@ HLRPG.KillCounterGroups = {
     combine = { name = "Combine", plural = "Combine", classes = {
         "npc_combine_s", "npc_metropolice", "npc_manhack", "npc_cscanner", "npc_clawscanner", "npc_rollermine",
         "npc_turret_floor", "npc_hunter", "npc_strider", "npc_combinegunship", "npc_helicopter",
-    } },
+    }, rewards = { [250] = "hat_metrocop" } },
     antlion = { name = "Antlion", plural = "antlions", classes = {
         "npc_antlion", "npc_antlion_worker", "npc_antlionguard",
     } },
@@ -231,6 +231,7 @@ for groupID, group in pairs(HLRPG.KillCounterGroups) do
             sort = string.format("2 %s %04d", group.name, tier.goal),
             counter = "kills_" .. groupID, goal = tier.goal,
             kills = tier.kills,
+            rewardItem = group.rewards and group.rewards[tier.goal],
         }
     end
 end

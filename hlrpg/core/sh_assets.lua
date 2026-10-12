@@ -1,7 +1,11 @@
 -- hlrpg/core/sh_assets.lua
 -- Every ownable item. Common fields: name, desc, group, price, currency ("XP" or "TP"), unbuyable,
 -- abilities = { { id = <key in HLRPG.Abilities (sh_abilities.lua)>, value = ... }, ... }
---   Suits:     model (a citizen-body playermodel: rebels, medics, Combine), hands, skin, headOffset (Vector)
+--   Suits:     model (a citizen-body playermodel: rebels, medics, Combine), hands, skin, color (tint, Color),
+--              material (replaces the model's textures), headOffset (Vector),
+--              helmet = true: the suit's own head (a helmet) is shown instead of the player's face while
+--              a hat with suitHelmet = true (the Metrocop Helmet) is worn
+--   Any item:  levelReward = N gives it for free on reaching level N (sv_progression.lua)
 --   Hats:      model, and placement on the head bone in PAC3's terms (copy the values from the PAC3 editor):
 --              offset = Position, angle = Angles, scale = Size, stretch = Scale (Vector).
 --              legacyPlacement = older hats tuned with the previous placement math.
@@ -47,20 +51,26 @@ HLRPG.Assets = {
 
     ["suit_metrocop"] = {
         name = "Metro Police",
-        desc = "Standard Civil Protection gear.",
+        desc = "Standard Civil Protection gear. Stunstick training included.",
         model = "models/player/police.mdl",
         hands = "models/weapons/c_arms_combine.mdl",
+        helmet = true,
         group = "Suits",
-        unbuyable = true,
-        abilities = { { id = "bonus_armor", value = 25 } }
+        price = 10000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 25 },
+            { id = "melee_damage", value = 0.25 }
+        }
     },
     ["suit_combine"] = {
         name = "Combine Soldier",
         desc = "Overwatch infantry armor.",
         model = "models/player/combine_soldier.mdl",
         hands = "models/weapons/c_arms_combine.mdl",
+        helmet = true,
         group = "Suits",
-        price = 5000,
+        price = 15000,
         currency = "XP",
         abilities = { { id = "bonus_armor", value = 50 } }
     },
@@ -69,6 +79,7 @@ HLRPG.Assets = {
         desc = "Nova Prospekt issue, sealed against toxins.",
         model = "models/player/combine_soldier_prisonguard.mdl",
         hands = "models/weapons/c_arms_combine.mdl",
+        helmet = true,
         group = "Suits",
         unbuyable = true,
         abilities = {
@@ -81,12 +92,154 @@ HLRPG.Assets = {
         desc = "Overwatch elite armor with self-repairing plating.",
         model = "models/player/combine_super_soldier.mdl",
         hands = "models/weapons/c_arms_combine.mdl",
+        helmet = true,
         group = "Suits",
-        price = 7500,
+        price = 45000,
         currency = "XP",
         abilities = {
             { id = "bonus_armor", value = 50 },
             { id = "armor_regen", value = 1 }
+        }
+    },
+
+    -- Combine role variants: the stock models' alternate skins, some tinted
+    ["suit_combine_shotgunner"] = {
+        name = "Combine Shotgunner",
+        desc = "Overwatch close-quarters unit.",
+        model = "models/player/combine_soldier.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
+        skin = 1,
+        helmet = true,
+        group = "Suits",
+        price = 25000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 25 },
+            { id = "shotgun_damage", value = 0.25 }
+        }
+    },
+    ["suit_combine_demolition"] = {
+        name = "Combine Demolitions",
+        desc = "Hazard-striped plating, padded against blasts.",
+        model = "models/player/combine_soldier.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
+        color = Color(255, 225, 120),
+        helmet = true,
+        group = "Suits",
+        price = 25000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 25 },
+            { id = "blast_resist", value = 0.5 }
+        }
+    },
+    ["suit_combine_recon"] = {
+        name = "Combine Recon",
+        desc = "Darkened scout armor. Hard to hit.",
+        model = "models/player/combine_soldier.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
+        color = Color(80, 85, 95),
+        helmet = true,
+        group = "Suits",
+        price = 25000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 25 },
+            { id = "dodge_chance", value = 0.08 }
+        }
+    },
+    ["suit_combine_medic"] = {
+        name = "Combine Medic",
+        desc = "Overwatch field medic, marked in red.",
+        model = "models/player/combine_soldier.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
+        color = Color(255, 110, 110),
+        helmet = true,
+        group = "Suits",
+        price = 30000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 25 },
+            { id = "heal_aura", value = 1 }
+        }
+    },
+    ["suit_combine_warden"] = {
+        name = "Nova Prospekt Warden",
+        desc = "Heavy prison shotgunner armor. Slow to break.",
+        model = "models/player/combine_soldier_prisonguard.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
+        skin = 1,
+        helmet = true,
+        group = "Suits",
+        price = 55000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 75 },
+            { id = "damage_resist", value = 0.1 }
+        }
+    },
+
+    -- Elite variants: the Elite model with recoloured textures (materials/hlrpg/suits/), each with its own role
+    ["suit_elite_vanguard"] = {
+        name = "Elite Vanguard",
+        desc = "Blood-red assault plating.",
+        model = "models/player/combine_super_soldier.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
+        material = "hlrpg/suits/elite_vanguard",
+        helmet = true,
+        group = "Suits",
+        price = 75000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 50 },
+            { id = "damage_bonus", value = 0.15 }
+        }
+    },
+    ["suit_elite_phantom"] = {
+        name = "Elite Phantom",
+        desc = "Blacked-out infiltration armor.",
+        model = "models/player/combine_super_soldier.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
+        material = "hlrpg/suits/elite_phantom",
+        helmet = true,
+        group = "Suits",
+        price = 75000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 50 },
+            { id = "dodge_chance", value = 0.12 },
+            { id = "armor_regen", value = 1 }
+        }
+    },
+    ["suit_elite_sentinel"] = {
+        name = "Elite Sentinel",
+        desc = "Gilded heavy plating that repairs itself.",
+        model = "models/player/combine_super_soldier.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
+        material = "hlrpg/suits/elite_sentinel",
+        helmet = true,
+        group = "Suits",
+        price = 85000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 125 },
+            { id = "armor_regen", value = 3 }
+        }
+    },
+    ["suit_elite_overseer"] = {
+        name = "Elite Overseer",
+        desc = "Command armor with a squad medical system.",
+        model = "models/player/combine_super_soldier.mdl",
+        hands = "models/weapons/c_arms_combine.mdl",
+        material = "hlrpg/suits/elite_overseer",
+        helmet = true,
+        group = "Suits",
+        price = 90000,
+        currency = "XP",
+        abilities = {
+            { id = "bonus_armor", value = 50 },
+            { id = "heal_aura", value = 2 },
+            { id = "health_regen", value = 2 }
         }
     },
 
@@ -97,7 +250,7 @@ HLRPG.Assets = {
         model = "models/gfreakman/gordonf.mdl",
         hands = "models/gfreakman/gordonf_hands.mdl",
         group = "Suits",
-        price = 8000,
+        price = 120000,
         currency = "XP",
         abilities = {
             { id = "bonus_armor", value = 100 },
@@ -106,29 +259,29 @@ HLRPG.Assets = {
     },
     ["suit_refugee"] = {
         name = "Refugee",
-        desc = "Hand-me-down clothes from the canals. Better than a citizen uniform.",
+        desc = "Hand-me-down clothes from the canals. Reward for reaching level 3.",
         model = "models/player/group02/male_04.mdl",
         group = "Suits",
-        price = 1000,
-        currency = "XP",
+        levelReward = 3,
+        unbuyable = true,
         abilities = { { id = "bonus_health", value = 10 } }
     },
     ["suit_rebel"] = {
         name = "Rebel",
-        desc = "Resistance fatigues. Built to take a beating.",
+        desc = "Resistance fatigues. Reward for reaching level 8.",
         model = "models/player/group03/male_07.mdl",
         group = "Suits",
-        price = 2000,
-        currency = "XP",
+        levelReward = 8,
+        unbuyable = true,
         abilities = { { id = "bonus_health", value = 25 } }
     },
     ["suit_rebel_medic"] = {
         name = "Rebel Medic",
-        desc = "Resistance field medic gear, stocked with supplies.",
+        desc = "Resistance field medic gear. Reward for reaching level 15.",
         model = "models/player/group03m/male_07.mdl",
         group = "Suits",
-        price = 4500,
-        currency = "XP",
+        levelReward = 15,
+        unbuyable = true,
         abilities = { { id = "health_regen", value = 1 } }
     },
 
@@ -141,10 +294,12 @@ HLRPG.Assets = {
     },
     ["pet_antlion"] = {
         name = "Antlion Pet",
+        desc = "Reward for Keep Off the Sand.",
         model = "models/antlion.mdl",
         group = "Pets",
         price = 4000,
-        currency = "XP"
+        currency = "XP",
+        unbuyable = true
     },
     ["pet_rollermine"] = {
         name = "Rollermine Pet",
@@ -156,7 +311,8 @@ HLRPG.Assets = {
 
     ["hat_metrocop"] = {
         name = "Metrocop Helmet",
-        desc = "City security visor.",
+        desc = "City security visor. On a Combine suit, puts on that suit's own helmet instead. Reward for Combine Hunter II.",
+        suitHelmet = true,
         model = "models/nova/w_headgear.mdl",
         group = "Hats",
         type = "hat",
@@ -166,6 +322,7 @@ HLRPG.Assets = {
         angle = Angle(90, 0, 270),
         scale = 1.0,
         legacyPlacement = true,
+        unbuyable = true,
         abilities = { { id = "combine_vision" } }
     },
     ["hat_melon"] = {

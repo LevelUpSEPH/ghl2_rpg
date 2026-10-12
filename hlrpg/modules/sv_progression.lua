@@ -8,6 +8,18 @@ function HLRPG.GetLevelMaxHealth(level)
     return 100 + ((level - 1) * 5)
 end
 
+-- Items marked levelReward = N are given on reaching level N (also catches up on join)
+local function GiveLevelRewards(ply)
+    local level = ply:GetLevel()
+    for itemID, item in SortedPairs(HLRPG.Assets) do
+        if item.levelReward and item.levelReward <= level and not ply:OwnsItem(itemID) then
+            HLRPG.GiveItem(ply, itemID, "Level " .. item.levelReward .. " reward")
+        end
+    end
+end
+
+hook.Add("HLRPG_PlayerDataLoaded", "HLRPG_LevelRewards", GiveLevelRewards)
+
 local function PerformLevelUp(ply)
     local level = ply:GetLevel()
     local xp = ply:GetXP()
@@ -20,6 +32,7 @@ local function PerformLevelUp(ply)
     if newLevel > level then
         ply:SaveLevel(newLevel)
         HLRPG.RefreshStats(ply, true)
+        GiveLevelRewards(ply)
 
         ply:EmitSound("ambient/levels/citadel/weapon_disintegrate2.wav", 100, 120)
         ply:ChatPrint(">>> LEVEL UP: " .. newLevel .. " <<<  You have " .. HLRPG.GetFreeStatPoints(ply) .. " stat point(s) to spend (TAB > STATS)")

@@ -10,13 +10,26 @@ local function GetSuit(suitID)
     return (asset and asset.group == "Suits") and asset or nil
 end
 
+-- Whether ply shows their suit's own helmet instead of their face: the suit has one (helmet = true) and the
+-- worn hat asks for it (suitHelmet = true, the Metrocop Helmet). The hat itself is then not drawn.
+local function IsHelmetShown(ply)
+    local suit, hat = GetSuit(ply.HLRPG_Suit), HLRPG.Assets[ply.HLRPG_ActiveHat or ""]
+    return suit ~= nil and suit.helmet == true and hat ~= nil and hat.suitHelmet == true
+end
+
 -- Sends ply's suit to target, or to everyone if target is nil
 local function SendSuit(ply, target)
     net.Start("HLRPG_Sync_Suit")
         net.WriteEntity(ply)
         net.WriteString(ply.HLRPG_Suit or "none")
+        net.WriteBool(IsHelmetShown(ply))
     if target then net.Send(target) else net.Broadcast() end
 end
+
+-- Changing hats can show or hide the suit's helmet, so the suit is redrawn
+hook.Add("HLRPG_HatChanged", "HLRPG_SuitHelmet", function(ply)
+    if GetSuit(ply.HLRPG_Suit) then SendSuit(ply) end
+end)
 
 local function ApplySuitHands(ply)
     ply:SetupHands()

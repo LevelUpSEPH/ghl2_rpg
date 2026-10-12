@@ -216,6 +216,21 @@ function meta:LoadSuit()
     return suitID
 end
 
+-- Deletes every HLRPG save of a SteamID ("STEAM_0:..."), online or not: XP, level, inventory, achievements,
+-- counters, lambdas, stats, pets, equipment and runs. GMod keys PData by SteamID64 (older saves by UniqueID).
+-- Leaderboard times are kept. Returns how many entries were removed.
+function HLRPG.WipePlayerData(steamID)
+    local removed = 0
+    for _, prefix in ipairs({ util.SteamIDTo64(steamID), util.CRC("gm_" .. steamID .. "_gm") }) do
+        for _, key in ipairs({ "[HLRPG_%", "[Pet%" }) do
+            local where = " WHERE infoid LIKE " .. sql.SQLStr(prefix .. key)
+            removed = removed + (tonumber(sql.QueryValue("SELECT COUNT(*) FROM playerpdata" .. where)) or 0)
+            sql.Query("DELETE FROM playerpdata" .. where)
+        end
+    end
+    return removed
+end
+
 function meta:InitialRPGSetup()
     self:GetXP()
     self:GetLevel()

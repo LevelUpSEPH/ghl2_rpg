@@ -189,3 +189,38 @@ AddAdminCommand("rpg_cleartimes", "rpg_cleartimes <board|all> [steamid] - delete
     local removed = HLRPG.ClearTimes(board, args[2] and string.upper(args[2]))
     Reply(caller, "Removed " .. removed .. " time(s).")
 end)
+
+-- Wipes all of a player's progress. Works for offline players by SteamID. Has to be run twice within
+-- 15 seconds to go through. An online player is kicked first so nothing in memory gets saved back.
+local pendingResets = {}
+
+AddAdminCommand("rpg_resetdata", "rpg_resetdata <player|steamid> - wipe ALL of a player's progress (run twice)", nil, function(caller, args)
+    local text = args[1] or ""
+    local target = FindPlayer(text)
+    local steamID = IsValid(target) and target:SteamID() or string.upper(text)
+    if not string.match(steamID, "^STEAM_%d:%d:%d+$") then
+        Reply(caller, "Usage: rpg_resetdata <online player name | STEAM_0:x:y>")
+        return
+    end
+
+    local who = IsValid(target) and (target:Nick() .. " (" .. steamID .. ")") or steamID
+    local callerKey = IsValid(caller) and caller:SteamID() or "console"
+    if pendingResets[callerKey] ~= steamID or (pendingResets[callerKey .. "_time"] or 0) < CurTime() then
+        pendingResets[callerKey] = steamID
+        pendingResets[callerKey .. "_time"] = CurTime() + 15
+        Reply(caller, "This deletes ALL progress of " .. who .. " (leaderboard times are kept). Run the same command again within 15 seconds to confirm.")
+        return
+    end
+    pendingResets[callerKey] = nil
+
+    if IsValid(target) then
+        -- Dropped so the disconnect hooks have nothing to save back
+        target.HLRPG_Counters = nil
+        target.HLRPG_Run = nil
+        target:Kick("Your HL2:RPG progress was reset by an admin. You can rejoin now.")
+    end
+
+    local removed = HLRPG.WipePlayerData(steamID)
+    Reply(caller, "Reset " .. who .. ": " .. removed .. " saved entries deleted.")
+    print("[HLRPG] Player data reset for " .. who .. " by " .. (IsValid(caller) and caller:Nick() or "console"))
+end)

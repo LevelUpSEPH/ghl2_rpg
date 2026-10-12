@@ -51,6 +51,10 @@ hook.Add("PostPlayerDraw", "HLRPG_RenderHats", function(ply)
     if not data or not IsValid(data.Ent) then return end
     if ply == LocalPlayer() and not ply:ShouldDrawLocalPlayer() then return end
 
+    -- A suitHelmet hat on a suit with a helmet shows the suit's own helmet instead (cl_suit_visuals.lua)
+    local suit = HLRPG.Assets[ply:GetNWString("HLRPG_ActiveSuit", "none")]
+    if data.Asset.suitHelmet and suit and suit.helmet then return end
+
     local bone = ply:LookupBone("ValveBiped.Bip01_Head1")
     local matrix = bone and ply:GetBoneMatrix(bone)
     if not matrix then return end

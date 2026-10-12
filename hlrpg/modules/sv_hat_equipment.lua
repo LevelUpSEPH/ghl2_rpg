@@ -20,6 +20,7 @@ function HLRPG.ApplyHat(ply, hatID)
     ply:SetNWString("HLRPG_ActiveHat", hatID)
     SendHat(ply)
     HLRPG.OnEquipmentChanged(ply, oldHatID, hatID)
+    hook.Run("HLRPG_HatChanged", ply, hatID)
 end
 
 function HLRPG.ToggleHat(ply, hatID)

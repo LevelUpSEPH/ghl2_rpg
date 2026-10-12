@@ -58,13 +58,17 @@ local function CreateBonemerged(model, ply)
 end
 
 -- The suit model, with its head hidden so the fake head shows the player's face instead
-local function CreateSuitModel(ply, data, suitConfig)
+-- (unless the suit's own helmet is shown)
+local function CreateSuitModel(ply, data, suitConfig, showHelmet)
     local suit = CreateBonemerged(suitConfig.model, ply)
     if not suit then return end
     suit:SetModelScale(1.01, 0)
+    if suitConfig.skin then suit:SetSkin(suitConfig.skin) end
+    if suitConfig.color then suit:SetColor(suitConfig.color) end
+    if suitConfig.material then suit:SetMaterial(suitConfig.material) end
 
     local headBone = suit:LookupBone("ValveBiped.Bip01_Head1")
-    if headBone then
+    if headBone and not showHelmet then
         suit:AddCallback("BuildBonePositions", function(ent)
             local m = IsValid(ent) and ent:GetBoneMatrix(headBone)
             if m then
@@ -119,7 +123,7 @@ local function CreateFakeHead(ply, data, suitConfig)
     data.FakeHead = head
 end
 
-local function UpdatePlayerVisuals(ply, suitID)
+local function UpdatePlayerVisuals(ply, suitID, showHelmet)
     local sid = ply:SteamID()
     RemoveVisuals(sid)
 
@@ -129,14 +133,15 @@ local function UpdatePlayerVisuals(ply, suitID)
     local data = {}
     Visuals[sid] = data
 
-    CreateSuitModel(ply, data, suitConfig)
-    CreateFakeHead(ply, data, suitConfig)
+    CreateSuitModel(ply, data, suitConfig, showHelmet)
+    if not showHelmet then CreateFakeHead(ply, data, suitConfig) end
 end
 
 net.Receive("HLRPG_Sync_Suit", function()
     local ply = net.ReadEntity()
     local suitID = net.ReadString()
-    if IsValid(ply) then UpdatePlayerVisuals(ply, suitID) end
+    local showHelmet = net.ReadBool()
+    if IsValid(ply) then UpdatePlayerVisuals(ply, suitID, showHelmet) end
 end)
 
 -- Keeps the real player model invisible (other code and respawns reset materials)
