@@ -14,7 +14,9 @@ Strategic Slot Policy: Strict Single-Slot rule. Equipping a new item or modifier
 Scope-Based Modifiers: Passive abilities (Lifesteal, Fire Ammo, etc.) that can be global or locked to specific weapon classes.
 
 📂 Structure
-This repository is the addon's `lua/` folder: install it as `garrysmod/addons/<name>/lua/`. Achievement icons go in `garrysmod/addons/<name>/materials/resources/icons/achievements/`.
+This repository is the whole addon: install it (or link it) as `garrysmod/addons/<name>/`. Code lives in `lua/`: config/, core/, modules/ and ui/ below are in `lua/hlrpg/`, entities/ is `lua/entities/`.
+
+materials/: Achievement icons (resources/icons/achievements/<achievement id>.jpg) and repainted suit textures (hlrpg/suits/). Both are sent to joining players by lua/hlrpg/modules/sv_resources.lua.
 
 config/: Server operator settings (welcome message, workshop content, safe maps, map reset, selectable player models).
 
@@ -27,7 +29,7 @@ ui/: Everything clientside: HUDs, menus, and the suit/hat renderers.
 entities/: Map entities GMod doesn't ship. logic_achievement lets Valve's maps report their achievement events (see core/sh_achievement_events.lua).
 
 🧩 Conventions
-Load order: autorun/sh_hlrpg_loader.lua loads config/, core/, modules/, ui/ in that order (files alphabetically, then subfolders). Dropping a new file in the right folder is enough; it doesn't need to be registered.
+Load order: lua/autorun/sh_hlrpg_loader.lua loads config/, core/, modules/, ui/ in that order (files alphabetically, then subfolders). Dropping a new file in the right folder is enough; it doesn't need to be registered.
 
 Realm prefixes: sv_ = server only, cl_ = client only, sh_ = both. Files without a prefix are skipped.
 

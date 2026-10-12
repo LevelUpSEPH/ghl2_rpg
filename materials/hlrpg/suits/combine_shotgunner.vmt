@@ -1,0 +1,23 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "hlrpg/suits/combine_shotgunner"
+	"$bumpmap" "models/combine_soldier/combinesoldiersheet_player_shotgun_normal"
+
+	"$phong" "1"
+	"$phongboost" "1.5"
+	"$phongexponent" "10"
+	"$phongexponenttexture" "models/combine_soldier/combinesoldier_phong"
+	"$phongalbedotint" "1"
+	"$phongfresnelranges" "[.1 .5 1.0]"
+
+	"$rimlight" "1"
+	"$rimlightexponent" "8"
+	"$rimlightboost" "1.5"
+
+	"$model" "1"
+	"$selfillum" "1"
+	"$halflambert" "1"
+	"$surfaceprop" "flesh"
+
+	"$selfillumtint" "[2.8 1.0 0.3]"
+}

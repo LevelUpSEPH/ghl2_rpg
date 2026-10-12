@@ -1,0 +1,19 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" 	"hlrpg/suits/elite_phantom"
+	"$bumpmap" "models/combine_soldier/combine_elite_normal"
+
+	"$phong" "1"
+	"$phongboost" "5"
+	"$phongexponenttexture" "models/combine_soldier/combine_elite_phong"
+	"$phongalbedotint" "1"										
+	"$phongfresnelranges"	"[.1 .5  1]"
+	
+	"$rimlight" "1"
+	"$rimlightexponent" "8"
+	"$rimlightboost" "1.5"
+	
+	"$blendtintbybasealpha" "1"
+	"$blendtintcoloroverbase" "0"
+	"$color2" "{70 72 80}"
+}

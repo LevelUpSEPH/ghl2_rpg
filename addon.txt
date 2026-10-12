@@ -1,0 +1,15 @@
+"AddonInfo"
+{
+    "name"          "Half-Life 2 RPG"
+    "version"       "1.0.0"
+    "author"        "Ege Sefertas"
+    "info"          "Half-Life 2 Co-op RPG System with Pets, Achievements & Items"
+    "ignore"
+    {
+        "*.psd"
+        "*.vcproj"
+        "*.svn"
+        ".git*"
+        "*.md"
+    }
+}
