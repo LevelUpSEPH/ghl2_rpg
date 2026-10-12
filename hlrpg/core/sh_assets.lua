@@ -213,6 +213,7 @@ HLRPG.Assets = {
         angle = Angle(90, 0, -90),
         scale = 0.9,
         legacyPlacement = true,
+        unbuyable = true,
         abilities = { { id = "second_wind" } }
     },
 
@@ -287,6 +288,61 @@ HLRPG.Assets = {
             { id = "no_armor_regen" }
         }
     },
+    -- New hats: placement is a rough first guess, to be tuned in the PAC3 editor
+    ["hat_gnome"] = {
+        name = "Gnome Chompski",
+        desc = "He made it to space. Now he rides with you. Reward for Little Rocket Man.",
+        model = "models/props_junk/gnome.mdl",
+        group = "Hats",
+        type = "hat",
+        price = 5000,
+        currency = "XP",
+        offset = Vector(4, 0, 0),
+        angle = Angle(0, 0, -90),
+        scale = 0.6,
+        unbuyable = true,
+        abilities = { { id = "xp_bonus", value = 0.1 } }
+    },
+    ["hat_grub"] = {
+        name = "Antlion Grub",
+        desc = "A glowing grub that survived the purge. Reward for Get Some Grub.",
+        model = "models/antlion_grub.mdl",
+        group = "Hats",
+        type = "hat",
+        price = 5000,
+        currency = "XP",
+        offset = Vector(5, 0, 0),
+        angle = Angle(0, 0, -90),
+        scale = 0.5,
+        unbuyable = true,
+        abilities = { { id = "heal_aura", value = 1 } }
+    },
+    ["hat_bucket"] = {
+        name = "Metal Bucket",
+        desc = "Head protection, technically.",
+        model = "models/props_junk/metalbucket01a.mdl",
+        group = "Hats",
+        type = "hat",
+        price = 1500,
+        currency = "XP",
+        offset = Vector(6, 0, 0),
+        angle = Angle(0, 0, 90),
+        scale = 0.8,
+        abilities = { { id = "bonus_armor", value = 25 } }
+    },
+    ["hat_flechette"] = {
+        name = "Hunter Flechette",
+        desc = "A flechette lodged in your skull. Somehow it helps you aim.",
+        model = "models/weapons/hunter_flechette.mdl",
+        group = "Hats",
+        type = "hat",
+        price = 4000,
+        currency = "XP",
+        offset = Vector(4, 0, 0),
+        angle = Angle(0, 0, 0),
+        scale = 1,
+        abilities = { { id = "flechette_chance", value = 3 } }
+    },
 
     ["upg_bhop"] = {
         name = "Bunny Hop",
@@ -316,5 +372,62 @@ HLRPG.Assets = {
         type = "modifier",
         scope = "weapon_shotgun",
         abilities = { { id = "pellet_multiplier", value = 2 } }
+    },
+    ["upg_dissolver_ar2"] = {
+        name = "Dissolver",
+        desc = "Pulse rounds sometimes dissolve what they hit. Reward for Atomizer.",
+        icon = "icon16/weather_lightning.png",
+        price = 6000, currency = "XP",
+        group = "Permanent Upgrades",
+        type = "modifier",
+        scope = "weapon_ar2",
+        unbuyable = true,
+        abilities = { { id = "dissolve_chance", value = 0.5 } }
+    },
+    ["upg_croveline"] = {
+        name = "Croveline",
+        desc = "Right click with the crowbar to throw one.",
+        icon = "icon16/wrench.png",
+        price = 3500, currency = "XP",
+        group = "Permanent Upgrades",
+        type = "modifier",
+        scope = "weapon_crowbar",
+        abilities = { { id = "crowbar_throw", value = 100 } }
+    },
+    ["upg_jump_pack"] = {
+        name = "Jump-Pack",
+        desc = "Jump again in mid-air. Click it in your inventory to toggle.",
+        icon = "icon16/control_eject.png",
+        price = 4000, currency = "XP",
+        group = "Permanent Upgrades",
+        type = "feature", setting = "hlrpg_jump_pack",
+        abilities = { { id = "double_jump", value = 260 } }
+    },
+    ["upg_jic_battery"] = {
+        name = "JIC Battery",
+        desc = "A just-in-case cell for the suit. Click it in your inventory to toggle.",
+        icon = "icon16/lightning.png",
+        price = 2000, currency = "XP",
+        group = "Permanent Upgrades",
+        type = "feature", setting = "hlrpg_jic_battery",
+        abilities = { { id = "aux_efficiency", value = 0.5 } }
+    },
+    ["upg_acid_resistance"] = {
+        name = "Acid-Resistance",
+        desc = "Antivenom in the suit's med system. Click it in your inventory to toggle.",
+        icon = "icon16/shield.png",
+        price = 2500, currency = "XP",
+        group = "Permanent Upgrades",
+        type = "feature", setting = "hlrpg_acid_resistance",
+        abilities = { { id = "poison_resistance" } }
+    },
+    ["upg_promised_stock"] = {
+        name = "Promised Stock",
+        desc = "Bigger pouches and extended magazines. Click it in your inventory to toggle.",
+        icon = "icon16/box.png",
+        price = 6000, currency = "XP",
+        group = "Permanent Upgrades",
+        type = "feature", setting = "hlrpg_promised_stock",
+        abilities = { { id = "ammo_capacity", value = 0.5 } }
     }
 }

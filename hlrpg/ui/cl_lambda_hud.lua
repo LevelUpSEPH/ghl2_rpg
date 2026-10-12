@@ -7,6 +7,7 @@ local L_DISPLAY_TIME = 6
 net.Receive("HLRPG_LambdaNotify", function()
     local data = {
         id = net.ReadString(),
+        xp = net.ReadInt(32),
         time = CurTime(),
         alpha = 0
     }
@@ -37,7 +38,7 @@ hook.Add("HUDPaint", "HLRPG_LambdaUniqueHUD", function()
     draw.SimpleText("λ", "DermaLarge", x + 15, y + L_PANEL_H/2, Color(255, 150, 0, cur.alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     draw.SimpleText("LAMBDA FOUND", "DermaDefaultBold", x + 50, y + 15, Color(255, 150, 0, cur.alpha))
-    draw.SimpleText("Acquired: " .. cur.id, "DermaDefault", x + 50, y + 30, Color(200, 200, 200, cur.alpha))
+    draw.SimpleText("Acquired: " .. cur.id .. (cur.xp > 0 and ("   +" .. string.Comma(cur.xp) .. " XP") or ""), "DermaDefault", x + 50, y + 30, Color(200, 200, 200, cur.alpha))
 
     if elapsed > L_DISPLAY_TIME then
         table.remove(lambda_draw_queue, 1)

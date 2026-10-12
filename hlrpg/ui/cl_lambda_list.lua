@@ -3,11 +3,10 @@
 
 local ACCENT = Color(255, 160, 0)
 
--- LambdaMap keys are "<map>_<entity>"; HL2 map names look like d1_canals_01a or d3_c17_06b
 local function GetCacheList()
     local caches = {}
-    for key, id in pairs(HLRPG.LambdaMap) do
-        caches[#caches + 1] = { id = id, map = key:match("^(d%d_%w+_%d+%a?)_") or "?" }
+    for _, cache in pairs(HLRPG.LambdaMap) do
+        caches[#caches + 1] = { id = cache.id, map = cache.map }
     end
 
     table.sort(caches, function(a, b)

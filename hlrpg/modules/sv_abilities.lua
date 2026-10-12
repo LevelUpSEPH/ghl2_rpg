@@ -47,10 +47,51 @@ hook.Add("PlayerDeath", "HLRPG_AbilityDeath", function(ply, inflictor, attacker)
     HLRPG.RunAbilityHook(ply, "OnDeath", attacker, inflictor)
 end)
 
-timer.Create("HLRPG_AbilityThink", 1, 0, function()
+local function ThinkAll(hookName)
     for _, ply in ipairs(player.GetAll()) do
         if ply:Alive() and not ply.IsZombieForm then
-            HLRPG.RunAbilityHook(ply, "Think")
+            HLRPG.RunAbilityHook(ply, hookName)
+        end
+    end
+end
+
+timer.Create("HLRPG_AbilityThink", 1, 0, function() ThinkAll("Think") end)
+timer.Create("HLRPG_AbilityQuickThink", 0.1, 0, function() ThinkAll("QuickThink") end)
+
+hook.Add("KeyPress", "HLRPG_AbilityKeyPress", function(ply, key)
+    if ply:Alive() and not ply.IsZombieForm then
+        HLRPG.RunAbilityHook(ply, "OnKeyPress", key)
+    end
+end)
+
+-- ammo_capacity: Lambda limits ammo to the skill convars (GM.MAX_AMMO_DEF) when ammo changes and before
+-- ammo pickups. Both are wrapped so players with the ability get the bigger limit instead.
+local function GetAmmoCap(gm, ply, ammoType)
+    local bonus = HLRPG.GetAbilityValue(ply, "ammo_capacity")
+    local cvar = gm.MAX_AMMO_DEF and gm.MAX_AMMO_DEF[game.GetAmmoName(ammoType) or ""]
+    if bonus <= 0 or not cvar then return nil end
+    return math.floor(cvar:GetInt() * (1 + bonus))
+end
+
+hook.Add("Initialize", "HLRPG_AmmoCapacity", function()
+    local limitAmmo = GAMEMODE.LimitPlayerAmmo
+    if limitAmmo then
+        function GAMEMODE:LimitPlayerAmmo(ply, ammoType, newCount)
+            local cap = GetAmmoCap(self, ply, ammoType)
+            if not cap then return limitAmmo(self, ply, ammoType, newCount) end
+            if self:GetSetting("limit_default_ammo") == false then return end
+            if newCount > cap then ply:SetAmmo(cap, ammoType) end
+        end
+    end
+
+    local canPickupAmmo = GAMEMODE.PlayerCanPickupAmmo
+    if canPickupAmmo then
+        function GAMEMODE:PlayerCanPickupAmmo(ply, ent)
+            local itemDef = self.ITEM_DEF and self.ITEM_DEF[ent:GetClass()]
+            local ammoType = itemDef and game.GetAmmoID(itemDef.Type) or -1
+            local cap = ammoType ~= -1 and GetAmmoCap(self, ply, ammoType)
+            if not cap then return canPickupAmmo(self, ply, ent) end
+            return ply:GetAmmoCount(ammoType) < cap
         end
     end
 end)

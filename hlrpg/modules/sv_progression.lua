@@ -58,7 +58,7 @@ hook.Add("OnNPCKilled", "HLRPG_XP_System", function(npc, attacker, inflictor)
     for ply, dmg in pairs(npc.HLRPG_DamageTable) do
         if IsValid(ply) and ply:IsPlayer() then
             local ratio = dmg / totalDamage
-            local xpGain = math.Round(totalXPAward * ratio)
+            local xpGain = math.Round(totalXPAward * ratio * (1 + HLRPG.GetAbilityValue(ply, "xp_bonus")))
 
             HLRPG.AddTempPoints(ply, baseXP * ratio * HLRPG.TempPointsPerXP)
 

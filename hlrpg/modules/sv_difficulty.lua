@@ -67,6 +67,8 @@ function HLRPG.SetDifficulty(level)
         end
     end
 
+    hook.Run("HLRPG_DifficultyChanged", level)
+
     local diffName = HLRPG.DifficultyScales[level].name:upper()
     for _, ply in ipairs(player.GetAll()) do
         ply:PrintMessage(HUD_PRINTCENTER, "WORLD DIFFICULTY: " .. diffName)

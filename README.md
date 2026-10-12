@@ -24,6 +24,8 @@ modules/: Server-side logic. Persistence (sv_database.lua), progression, combat,
 
 ui/: Everything clientside: HUDs, menus, and the suit/hat renderers.
 
+entities/: Map entities GMod doesn't ship. logic_achievement lets Valve's maps report their achievement events (see core/sh_achievement_events.lua).
+
 🧩 Conventions
 Load order: autorun/sh_hlrpg_loader.lua loads config/, core/, modules/, ui/ in that order (files alphabetically, then subfolders). Dropping a new file in the right folder is enough; it doesn't need to be registered.
 

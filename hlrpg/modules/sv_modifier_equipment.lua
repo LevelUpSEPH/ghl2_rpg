@@ -6,6 +6,14 @@ local function SetUpgradeActive(ply, itemID, active)
     ply:SetNWBool("HLRPG_ModActive_" .. itemID, active)
 end
 
+-- Turns an upgrade on or off in its scope's slot without saving (used when loading saved upgrades)
+function HLRPG.SetModifierActive(ply, itemID, active)
+    local scope = HLRPG.Assets[itemID].scope or "Global"
+    ply.HLRPG_EquippedMods = ply.HLRPG_EquippedMods or {}
+    ply.HLRPG_EquippedMods[scope] = active and itemID or nil
+    SetUpgradeActive(ply, itemID, active)
+end
+
 function HLRPG.ToggleModifierItem(ply, itemID)
     local item = HLRPG.Assets[itemID]
     if not IsValid(ply) or not item then return end
@@ -20,6 +28,7 @@ function HLRPG.ToggleModifierItem(ply, itemID)
     end
 
     if current == itemID then
+        ply:SaveModifiers()
         HLRPG.OnEquipmentChanged(ply, itemID, "none")
         ply:ChatPrint("[MOD] " .. item.name .. " disabled.")
         return
@@ -27,6 +36,7 @@ function HLRPG.ToggleModifierItem(ply, itemID)
 
     SetUpgradeActive(ply, itemID, true)
     ply.HLRPG_EquippedMods[scope] = itemID
+    ply:SaveModifiers()
     HLRPG.OnEquipmentChanged(ply, current or "none", itemID)
 
     ply:ChatPrint(string.format("[MOD] %s activated (%s)", item.name, scope))

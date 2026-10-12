@@ -10,6 +10,8 @@
 --   OnEquip(ply, value) / OnUnequip(ply, value)
 --   OnRefill(ply, value)                    -> health was fully restored (spawn, level up, join)
 --   Think(ply, value)                       -> once per second while alive
+--   QuickThink(ply, value)                  -> ten times per second while alive
+--   OnKeyPress(ply, value, key)             -> the player pressed a key (IN_ATTACK2, ...)
 --   OnFireBullets(ply, value, bulletData)   -> edit bulletData in place
 --   OnDealDamage(ply, value, target, dmginfo)
 --   OnTakeDamage(ply, value, attacker, dmginfo)
@@ -18,10 +20,14 @@
 --   OnDeath(ply, value, attacker, inflictor)
 -- Shared (runs on the server and in the local player's prediction):
 --   StartCommand(ply, value, cmd)           -> edit the player's input before it's processed
+--   Move(ply, value, mv)                    -> edit movement (velocity) before it's processed
 -- Client only, for the local player:
 --   RenderScreen(ply, value) / DrawHalos(ply, value) / HUDPaint(ply, value)
 
 HLRPG.Abilities = {}
+
+-- Button that carries mid-air jump presses (see the StartCommand hook at the bottom)
+local AIR_JUMP_KEY = IN_BULLRUSH
 
 local DEF = HLRPG.Abilities
 
@@ -337,6 +343,194 @@ DEF["second_wind"] = {
     end
 }
 
+-- Bullets that hit an NPC sometimes dissolve it outright, like a Combine ball. Bosses are skipped for
+-- the same reason as fizzle_killer.
+DEF["dissolve_chance"] = {
+    Describe = function(value) return value .. "% chance per hit to dissolve the target" end,
+    OnDealDamage = function(ply, value, target, dmginfo)
+        if not target:IsNPC() or HLRPG.BossNPCs[target:GetClass()] or not dmginfo:IsBulletDamage() then return end
+        if math.random() * 100 >= value then return end
+
+        dmginfo:SetDamageType(bit.bor(dmginfo:GetDamageType(), DMG_DISSOLVE))
+        dmginfo:SetDamage(math.max(dmginfo:GetDamage(), target:Health() + 100))
+    end
+}
+
+-- Shots sometimes also launch a Hunter flechette, which sticks and explodes. Marked so it can't count as
+-- a Hunter's own flechette (EP2 Payback).
+local FLECHETTE_SPEED = 2000
+
+DEF["flechette_chance"] = {
+    Describe = function(value) return value .. "% chance per shot to also fire a Hunter flechette" end,
+    OnFireBullets = function(ply, value, data)
+        if math.random() * 100 >= value then return end
+
+        local dir = ply:GetAimVector()
+        local flechette = ents.Create("hunter_flechette")
+        if not IsValid(flechette) then return end
+
+        flechette:SetPos(ply:GetShootPos() + dir * 32)
+        flechette:SetAngles(dir:Angle())
+        flechette:SetOwner(ply)
+        flechette.HLRPG_PlayerFired = true
+        flechette:Spawn()
+        flechette:SetVelocity(dir * FLECHETTE_SPEED)
+        flechette:EmitSound("NPC_Hunter.FlechetteShoot")
+    end
+}
+
+-- Right click with the crowbar throws a spinning crowbar that hits the first thing it touches.
+-- The hit is credited to the player (not the prop), so it doesn't count as a physics kill.
+local CROWBAR_THROW_SPEED = 1500
+local CROWBAR_THROW_COOLDOWN = 1
+
+local function ThrownCrowbarHit(crowbar, data)
+    if crowbar.HLRPG_Hit then return end
+    local ply, target = crowbar:GetOwner(), data.HitEntity
+    crowbar.HLRPG_Hit = true
+    SafeRemoveEntityDelayed(crowbar, 3)
+
+    if not IsValid(ply) or not IsValid(target) or target:IsWorld() then
+        crowbar:EmitSound("Weapon_Crowbar.Melee_HitWorld")
+        return
+    end
+
+    -- Damage is dealt after the physics callback; killing things inside it can crash the game
+    local damage, hitPos = crowbar.HLRPG_Damage, data.HitPos
+    crowbar:EmitSound("Weapon_Crowbar.Melee_Hit")
+    timer.Simple(0, function()
+        if not IsValid(ply) or not IsValid(target) then return end
+
+        local dmg = DamageInfo()
+        dmg:SetDamage(damage)
+        dmg:SetDamageType(DMG_CLUB)
+        dmg:SetAttacker(ply)
+        dmg:SetInflictor(ply)
+        dmg:SetDamagePosition(hitPos)
+        target:TakeDamageInfo(dmg)
+    end)
+end
+
+DEF["crowbar_throw"] = {
+    Describe = function(value) return "Right click throws a crowbar for " .. value .. " damage" end,
+    OnKeyPress = function(ply, value, key)
+        if key ~= IN_ATTACK2 or CurTime() < (ply.HLRPG_NextCrowbarThrow or 0) then return end
+        ply.HLRPG_NextCrowbarThrow = CurTime() + CROWBAR_THROW_COOLDOWN
+
+        local dir = ply:GetAimVector()
+        local crowbar = ents.Create("prop_physics")
+        if not IsValid(crowbar) then return end
+
+        crowbar:SetModel("models/weapons/w_crowbar.mdl")
+        crowbar:SetPos(ply:GetShootPos() + dir * 24)
+        crowbar:SetAngles(dir:Angle())
+        crowbar:SetOwner(ply)
+        crowbar.HLRPG_Damage = value
+        crowbar:Spawn()
+        crowbar:AddCallback("PhysicsCollide", ThrownCrowbarHit)
+        SafeRemoveEntityDelayed(crowbar, 10)
+
+        local phys = crowbar:GetPhysicsObject()
+        if IsValid(phys) then
+            phys:SetVelocity(dir * CROWBAR_THROW_SPEED + ply:GetVelocity())
+            phys:AddAngleVelocity(Vector(0, 1500, 0))
+        end
+        ply:EmitSound("Weapon_Crowbar.Single")
+        ply:SetAnimation(PLAYER_ATTACK1)
+    end
+}
+
+-- Poison headcrab bites leave you at 1 health instead of killing you (the original HL2 behaviour)
+local POISON_HEADCRABS = { npc_headcrab_black = true, npc_headcrab_poison = true }
+
+DEF["poison_resistance"] = {
+    Describe = function() return "Poison headcrab bites leave you at 1 health instead of killing you" end,
+    OnTakeDamage = function(ply, value, attacker, dmginfo)
+        local poisoned = dmginfo:IsDamageType(DMG_POISON) or (IsValid(attacker) and POISON_HEADCRABS[attacker:GetClass()])
+        if not poisoned then return end
+        dmginfo:SetDamage(math.min(dmginfo:GetDamage(), math.max(0, ply:Health() - 1)))
+    end
+}
+
+-- One extra jump in mid-air; value is the upward speed it gives. Mid-air jump presses arrive as
+-- AIR_JUMP_KEY (see the StartCommand hook below), since the jump key itself is removed while airborne.
+DEF["double_jump"] = {
+    Describe = function() return "Jump again in mid-air" end,
+    Move = function(ply, value, mv)
+        if ply:OnGround() or ply:GetMoveType() ~= MOVETYPE_WALK or ply:WaterLevel() >= 2 then
+            ply.HLRPG_AirJumped = false
+            return
+        end
+        if ply.HLRPG_AirJumped or not mv:KeyPressed(AIR_JUMP_KEY) then return end
+
+        ply.HLRPG_AirJumped = true
+        local vel = mv:GetVelocity()
+        vel.z = value
+        mv:SetVelocity(vel)
+        if SERVER then ply:EmitSound("weapons/physcannon/superphys_small_zap" .. math.random(1, 4) .. ".wav", 60, 140) end
+    end
+}
+
+-- Lambda's suit power (sprint, flashlight, air) has a fixed max of 100, so instead of raising it, part of
+-- what was drained since the last second is given back. value 0.5 = drains half as fast = lasts twice as long.
+DEF["aux_efficiency"] = {
+    Describe = function(value) return "Suit power lasts " .. math.Round(1 / (1 - value), 1) .. "x as long" end,
+    Think = function(ply, value)
+        if not ply.GetLambdaSuitPower then return end
+
+        local power = ply:GetLambdaSuitPower()
+        local last = ply.HLRPG_LastAuxPower or power
+        if power < last then
+            power = math.min(100, power + (last - power) * value)
+            ply:SetLambdaSuitPower(power)
+        end
+        ply.HLRPG_LastAuxPower = power
+    end
+}
+
+-- More reserve ammo (the limit itself is applied in sv_abilities.lua, around Lambda's ammo limits) and
+-- bigger magazines: when a reload fills the clip to its normal size, it's topped up from the reserve.
+DEF["ammo_capacity"] = {
+    Describe = function(value) return "+" .. math.Round(value * 100) .. "% max ammo and magazine size" end,
+    QuickThink = function(ply, value)
+        local wep = ply:GetActiveWeapon()
+        if not IsValid(wep) or wep:GetMaxClip1() <= 1 then return end
+
+        local clip, maxClip = wep:Clip1(), wep:GetMaxClip1()
+        local last = wep.HLRPG_LastClip
+        wep.HLRPG_LastClip = clip
+        if clip ~= maxClip or not last or last >= clip then return end
+
+        local ammoType = wep:GetPrimaryAmmoType()
+        local reserve = ply:GetAmmoCount(ammoType)
+        local extra = math.min(math.ceil(maxClip * value), reserve)
+        if extra <= 0 then return end
+
+        wep:SetClip1(maxClip + extra)
+        ply:SetAmmo(reserve - extra, ammoType)
+        wep.HLRPG_LastClip = maxClip + extra
+    end
+}
+
+-- Kill XP bonus, applied where kill XP is split (sv_progression.lua)
+DEF["xp_bonus"] = {
+    Describe = function(value) return "+" .. math.Round(value * 100) .. "% XP from kills" end
+}
+
+-- Heals every player nearby, the wearer included, once per second
+local HEAL_AURA_RADIUS = 250
+
+DEF["heal_aura"] = {
+    Describe = function(value) return "Heals you and players near you " .. value .. " health/s" end,
+    Think = function(ply, value)
+        for _, other in ipairs(player.GetAll()) do
+            if other:Alive() and other:GetPos():DistToSqr(ply:GetPos()) <= HEAL_AURA_RADIUS ^ 2 then
+                AddHealth(other, value)
+            end
+        end
+    end
+}
+
 -- Vision
 
 DEF["combine_vision"] = {
@@ -476,7 +670,18 @@ function HLRPG.DescribeAbilities(item)
     return table.concat(lines, "  •  ")
 end
 
--- Input abilities run on both realms so the client's prediction matches the server
+-- Input abilities run on both realms so the client's prediction matches the server.
+-- Lambda's auto jump and auto_bhop strip the jump key while airborne, before the command reaches the
+-- server. So the client marks a fresh mid-air jump press with AIR_JUMP_KEY (unused by HL2 movement) first.
 hook.Add("StartCommand", "HLRPG_AbilityInput", function(ply, cmd)
+    if CLIENT then
+        local jumpDown = cmd:KeyDown(IN_JUMP)
+        if jumpDown and not ply.HLRPG_JumpDown and not ply:OnGround() then cmd:AddKey(AIR_JUMP_KEY) end
+        ply.HLRPG_JumpDown = jumpDown
+    end
     HLRPG.RunAbilityHook(ply, "StartCommand", cmd)
+end)
+
+hook.Add("SetupMove", "HLRPG_AbilityMove", function(ply, mv)
+    HLRPG.RunAbilityHook(ply, "Move", mv)
 end)

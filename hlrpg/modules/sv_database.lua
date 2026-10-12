@@ -85,6 +85,16 @@ function meta:SaveStats()
     SaveJSON(self, "HLRPG_Stats", data)
 end
 
+-- Progress counters for achievements (deaths, kills per enemy group, ...)
+
+function meta:LoadCounters()
+    self.HLRPG_Counters = LoadJSON(self, "HLRPG_Counters")
+end
+
+function meta:SaveCounters()
+    SaveJSON(self, "HLRPG_Counters", self.HLRPG_Counters)
+end
+
 -- Achievements / Lambdas
 
 -- Counts are networked for the scoreboard
@@ -165,6 +175,20 @@ function meta:LoadHat()
     return hatID
 end
 
+-- Active upgrades, one per scope: { [scope] = itemID }
+function meta:SaveModifiers()
+    SaveJSON(self, "HLRPG_ActiveModifiers", self.HLRPG_EquippedMods)
+end
+
+function meta:LoadModifiers()
+    for _, itemID in pairs(LoadJSON(self, "HLRPG_ActiveModifiers")) do
+        local item = HLRPG.Assets[itemID]
+        if item and item.type == "modifier" and self:OwnsItem(itemID) then
+            HLRPG.SetModifierActive(self, itemID, true)
+        end
+    end
+end
+
 function meta:SaveSuit()
     self:SetPData("HLRPG_ActiveSuit", self:GetNWString("HLRPG_ActiveSuit", "none"))
 end
@@ -196,6 +220,7 @@ function meta:InitialRPGSetup()
     self:GetXP()
     self:GetLevel()
     self:LoadAchievements()
+    self:LoadCounters()
     self:LoadLambdas()
     self:LoadPetData()
     self:LoadStats()
@@ -203,6 +228,7 @@ function meta:InitialRPGSetup()
     self:LoadPlayerModel()
     self:LoadHat()
     self:LoadSuit()
+    self:LoadModifiers()
 
     self:SetNWInt("HLRPG_XP", self.HLRPG_XP)
     self:SetNWInt("HLRPG_Level", self.HLRPG_Level)

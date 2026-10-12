@@ -48,6 +48,13 @@ function HLRPG.GetNPCLevelMultiplier(stat, npcLevel)
     return (scaling.base + (scaling.perLevel or 0) * levels) * scaling.growth ^ levels
 end
 
+-- XP worth `kills` standard enemies (LevelCurve.ReferenceNPC) at the given level. Rewards use this so they
+-- stay worth the same effort at any level, on the same curve as kill XP and leveling.
+function HLRPG.GetKillEquivalentXP(kills, level)
+    local referenceXP = HLRPG.NPCXP[HLRPG.LevelCurve.ReferenceNPC]
+    return math.Round(kills * referenceXP * HLRPG.GetNPCLevelMultiplier("XP", level))
+end
+
 local requiredXPCache = {}
 
 -- Total (cumulative) XP needed to pass the given player level, rounded to the nearest 50
