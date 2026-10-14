@@ -46,10 +46,11 @@ end
 local function AddAdminCommand(name, usage, argCount, callback)
     commands[#commands + 1] = { name = name, usage = usage }
 
-    concommand.Add(name, function(caller, cmd, args)
+    concommand.Add(name, function(caller, cmd, args, argStr)
         if IsValid(caller) and not caller:IsAdmin() then return end
 
-        if argCount == nil then return callback(caller, args) end
+        -- Commands without a target also get the raw text (the console splits words at ":", e.g. in links)
+        if argCount == nil then return callback(caller, args, argStr) end
 
         local target, rest = TakeTarget(caller, args, argCount)
         if target then callback(caller, target, rest) end
@@ -223,4 +224,16 @@ AddAdminCommand("rpg_resetdata", "rpg_resetdata <player|steamid> - wipe ALL of a
     local removed = HLRPG.WipePlayerData(steamID)
     Reply(caller, "Reset " .. who .. ": " .. removed .. " saved entries deleted.")
     print("[HLRPG] Player data reset for " .. who .. " by " .. (IsValid(caller) and caller:Nick() or "console"))
+end)
+
+-- With no text, shows the current message. "reset" goes back to the config default.
+AddAdminCommand("rpg_welcome", "rpg_welcome [text|reset] - show or change the welcome message ({name} = player)", nil, function(caller, args, argStr)
+    local text = string.Trim(string.Trim(argStr or ""), '"')
+    if text == "" then
+        Reply(caller, "Welcome message: " .. HLRPG.GetWelcomeMessage())
+        return
+    end
+
+    HLRPG.SetWelcomeMessage(string.lower(text) == "reset" and "" or text)
+    Reply(caller, "Welcome message set to: " .. HLRPG.GetWelcomeMessage())
 end)

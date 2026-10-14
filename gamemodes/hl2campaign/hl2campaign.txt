@@ -1,0 +1,8 @@
+"hl2campaign"
+{
+	"base"		"lambda"
+	"title"		"Half-Life 2 Campaign"
+	"maps"		"^d1_|^d2_|^d3_|^ep1_|^ep2_"
+	"category"	"pve"
+	"menusystem"	"1"
+}

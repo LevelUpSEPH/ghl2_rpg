@@ -3,12 +3,13 @@
 
 HLRPG.Config = {}
 
--- %s is replaced with the player's name
-HLRPG.Config.WelcomeMessage = ">>> Welcome, %s! Join our discord at: https://discord.gg/d588UVcpzD <<<"
+-- Default welcome message; {name} is replaced with the player's name. Admins can change it in-game or from the
+-- server console with rpg_welcome, which saves it to data/hlrpg/welcome.txt and overrides this default.
+HLRPG.Config.WelcomeMessage = ">>> Welcome, {name}! <<<"
 
--- Workshop items clients download on join
+-- Workshop items clients download on join. Lambda isn't one of them: the server's own (non-Workshop) copy of the
+-- gamemode sends its content to players itself, and mixing it with the Workshop release breaks the gamemode.
 HLRPG.Config.WorkshopContent = {
-    "780244493",  -- Lambda - Half-Life 2 Co-Op content
     "3320656757", -- Gordon Freeman Restored (HEV Suit model)
 }
 

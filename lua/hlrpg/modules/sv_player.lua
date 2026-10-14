@@ -11,11 +11,28 @@ net.Receive("HLRPG_ClientReady", function(len, ply)
     hook.Run("HLRPG_ClientReady", ply)
 end)
 
+-- Welcome message: the saved one (rpg_welcome) if set, else the config default
+local WELCOME_FILE = "hlrpg/welcome.txt"
+
+function HLRPG.GetWelcomeMessage()
+    local saved = file.Read(WELCOME_FILE, "DATA")
+    return (saved and saved ~= "") and saved or HLRPG.Config.WelcomeMessage
+end
+
+function HLRPG.SetWelcomeMessage(text)
+    file.CreateDir("hlrpg")
+    file.Write(WELCOME_FILE, text)
+end
+
+function HLRPG.FormatWelcome(ply)
+    return (string.gsub(HLRPG.GetWelcomeMessage(), "{name}", function() return ply:Nick() end))
+end
+
 hook.Add("PlayerInitialSpawn", "HLRPG_InitialLoad", function(ply)
     timer.Simple(0.5, function()
         if not IsValid(ply) then return end
 
         ply:InitialRPGSetup()
-        ply:ChatPrint(string.format(HLRPG.Config.WelcomeMessage, ply:Nick()))
+        ply:ChatPrint(HLRPG.FormatWelcome(ply))
     end)
 end)
