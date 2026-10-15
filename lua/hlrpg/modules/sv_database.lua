@@ -176,6 +176,20 @@ function meta:LoadHat()
 end
 
 -- Active upgrades, one per scope: { [scope] = itemID }
+-- Loot (sv_gear.lua): { items = { [uid] = item }, equipped = { [slot] = uid }, nextID }
+function meta:SaveGear()
+    SaveJSON(self, "HLRPG_Gear", self.HLRPG_Gear)
+end
+
+function meta:LoadGear()
+    local gear = LoadJSON(self, "HLRPG_Gear")
+    gear.items = gear.items or {}
+    gear.equipped = gear.equipped or {}
+    gear.nextID = tonumber(gear.nextID) or 1
+    self.HLRPG_Gear = gear
+    self.HLRPG_GearAbilityCache = nil
+end
+
 function meta:SaveModifiers()
     SaveJSON(self, "HLRPG_ActiveModifiers", self.HLRPG_EquippedMods)
 end
@@ -244,6 +258,7 @@ function meta:InitialRPGSetup()
     self:LoadHat()
     self:LoadSuit()
     self:LoadModifiers()
+    self:LoadGear()
 
     self:SetNWInt("HLRPG_XP", self.HLRPG_XP)
     self:SetNWInt("HLRPG_Level", self.HLRPG_Level)

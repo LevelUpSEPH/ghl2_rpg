@@ -14,6 +14,7 @@ local NAV_PAGES = {
     { label = "ACHIEVEMENTS", icon = "icon16/award_star_gold_1.png", open = function() HLRPG.RequestMenu("achievements") end },
     { label = "LAMBDAS",      icon = "icon16/map.png",               open = function() HLRPG.RequestMenu("lambdas") end },
     { label = "LEADERBOARDS", icon = "icon16/time.png",              open = function() HLRPG.RequestMenu("leaderboards") end },
+    { label = "GEAR",         icon = "icon16/shield.png",            open = function() HLRPG.RequestGearMenu() end },
     { label = "VOTE",         icon = "icon16/thumb_up.png",          open = function() HLRPG.OpenVoteMenu() end },
     { label = "VEHICLE",      icon = "icon16/car.png",               open = function() HLRPG.RequestMenu("vehicle") end },
     { label = "DIFFICULTY",   icon = "icon16/chart_bar.png",         open = function() HLRPG.OpenDifficultyMenu() end },

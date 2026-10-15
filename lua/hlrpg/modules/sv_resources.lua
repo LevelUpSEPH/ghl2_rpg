@@ -12,4 +12,5 @@ end
 -- Suit textures (materials/hlrpg/suits/); adding the .vmt sends its .vtf too
 for _, item in pairs(HLRPG.Assets) do
     if item.material then resource.AddFile("materials/" .. item.material .. ".vmt") end
+    for _, extra in ipairs(item.extraMaterials or {}) do resource.AddFile("materials/" .. extra .. ".vmt") end
 end

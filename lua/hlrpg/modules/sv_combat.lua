@@ -177,5 +177,7 @@ hook.Add("EntityFireBullets", "HLRPG_Core_FireBullets", function(ply, data)
     if not IsValid(ply) or not ply:IsPlayer() then return end
 
     HLRPG.RunAbilityHook(ply, "OnFireBullets", data)
+    -- This hook returns a value, which stops later EntityFireBullets hooks, so others listen here instead
+    hook.Run("HLRPG_PlayerFiredBullets", ply, data)
     return true
 end)

@@ -94,6 +94,120 @@ HLRPG.PetData = {
                 xpRequired = 3000, xpIncreasePerLevel = 700
             }
         }
+    },
+    -- Admin-only showcase pets (rpg_giveitem pet_hunter_green / _pink / _infernal / _sovereign): Hunters with recoloured armor
+    -- plates and skin (materials/hlrpg/pets/); the skin texture carries the eye colour too
+    ["pet_hunter_green"] = {
+        Evolutions = {
+            [1] = {
+                class = "npc_hunter", name = "Toxic Hunter Whelp",
+                modelScale = 0.5,
+                baseHealth = 2000, healthPerLevel = 150,
+                dmgMultiplier = 1.5,
+                xpRequired = 60, xpIncreasePerLevel = 15,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_green", "hlrpg/pets/hunter_skin_green") end
+            },
+            [10] = {
+                class = "npc_hunter", name = "Toxic Hunter",
+                modelScale = 0.6,
+                baseHealth = 6000, healthPerLevel = 400,
+                dmgMultiplier = 3.0,
+                xpRequired = 300, xpIncreasePerLevel = 60,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_green", "hlrpg/pets/hunter_skin_green") end
+            },
+            [20] = {
+                class = "npc_hunter", name = "Toxic Hunter Alpha",
+                modelScale = 0.7,
+                baseHealth = 15000, healthPerLevel = 1000,
+                dmgMultiplier = 6.0,
+                xpRequired = 3000, xpIncreasePerLevel = 700,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_green", "hlrpg/pets/hunter_skin_green") end
+            }
+        }
+    },
+    ["pet_hunter_pink"] = {
+        Evolutions = {
+            [1] = {
+                class = "npc_hunter", name = "Neon Hunter Whelp",
+                modelScale = 0.5,
+                baseHealth = 2000, healthPerLevel = 150,
+                dmgMultiplier = 1.5,
+                xpRequired = 60, xpIncreasePerLevel = 15,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_pink", "hlrpg/pets/hunter_skin_pink") end
+            },
+            [10] = {
+                class = "npc_hunter", name = "Neon Hunter",
+                modelScale = 0.6,
+                baseHealth = 6000, healthPerLevel = 400,
+                dmgMultiplier = 3.0,
+                xpRequired = 300, xpIncreasePerLevel = 60,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_pink", "hlrpg/pets/hunter_skin_pink") end
+            },
+            [20] = {
+                class = "npc_hunter", name = "Neon Hunter Alpha",
+                modelScale = 0.7,
+                baseHealth = 15000, healthPerLevel = 1000,
+                dmgMultiplier = 6.0,
+                xpRequired = 3000, xpIncreasePerLevel = 700,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_pink", "hlrpg/pets/hunter_skin_pink") end
+            }
+        }
+    },
+    ["pet_hunter_infernal"] = {
+        Evolutions = {
+            [1] = {
+                class = "npc_hunter", name = "Infernal Hunter Whelp",
+                modelScale = 0.5,
+                baseHealth = 2000, healthPerLevel = 150,
+                dmgMultiplier = 1.5,
+                xpRequired = 60, xpIncreasePerLevel = 15,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_infernal", "hlrpg/pets/hunter_skin_infernal") end
+            },
+            [10] = {
+                class = "npc_hunter", name = "Infernal Hunter",
+                modelScale = 0.6,
+                baseHealth = 6000, healthPerLevel = 400,
+                dmgMultiplier = 3.0,
+                xpRequired = 300, xpIncreasePerLevel = 60,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_infernal", "hlrpg/pets/hunter_skin_infernal") end
+            },
+            [20] = {
+                class = "npc_hunter", name = "Infernal Hunter Alpha",
+                modelScale = 0.7,
+                baseHealth = 15000, healthPerLevel = 1000,
+                dmgMultiplier = 6.0,
+                xpRequired = 3000, xpIncreasePerLevel = 700,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_infernal", "hlrpg/pets/hunter_skin_infernal") end
+            }
+        }
+    },
+    ["pet_hunter_sovereign"] = {
+        Evolutions = {
+            [1] = {
+                class = "npc_hunter", name = "Sovereign Hunter Whelp",
+                modelScale = 0.5,
+                baseHealth = 2000, healthPerLevel = 150,
+                dmgMultiplier = 1.5,
+                xpRequired = 60, xpIncreasePerLevel = 15,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_sovereign", "hlrpg/pets/hunter_skin_sovereign") end
+            },
+            [10] = {
+                class = "npc_hunter", name = "Sovereign Hunter",
+                modelScale = 0.6,
+                baseHealth = 6000, healthPerLevel = 400,
+                dmgMultiplier = 3.0,
+                xpRequired = 300, xpIncreasePerLevel = 60,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_sovereign", "hlrpg/pets/hunter_skin_sovereign") end
+            },
+            [20] = {
+                class = "npc_hunter", name = "Sovereign Hunter Alpha",
+                modelScale = 0.7,
+                baseHealth = 15000, healthPerLevel = 1000,
+                dmgMultiplier = 6.0,
+                xpRequired = 3000, xpIncreasePerLevel = 700,
+                OnSpawn = function(pet) HLRPG.PaintHunter(pet, "hlrpg/pets/hunter_armor_sovereign", "hlrpg/pets/hunter_skin_sovereign") end
+            }
+        }
     }
 }
 
@@ -123,4 +237,14 @@ function HLRPG.GetPetRequiredXP(petID, level)
     if not evo then return 100 end
 
     return math.max(1, evo.xpRequired + ((level - stage) * evo.xpIncreasePerLevel))
+end
+
+-- Replaces a Hunter's armor texture and optionally its skin (the skin texture's alpha is the eye glow mask,
+-- so the eye colour comes with the skin)
+local HUNTER_SKIN_MATERIAL, HUNTER_ARMOR_MATERIAL = 0, 1
+
+function HLRPG.PaintHunter(pet, armor, skin)
+    if not SERVER or not IsValid(pet) then return end
+    pet:SetSubMaterial(HUNTER_ARMOR_MATERIAL, armor)
+    if skin then pet:SetSubMaterial(HUNTER_SKIN_MATERIAL, skin) end
 end

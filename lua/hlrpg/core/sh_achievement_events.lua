@@ -52,6 +52,37 @@ HLRPG.AchievementEvents = {
     ["ACHIEVEMENT_EVENT_EP2_RADARCACHE_RPG"] = { collection = "ep2_radarcaches", item = "rpg" },
     ["ACHIEVEMENT_EVENT_EP2_RADARCACHE_CAVE"] = { collection = "ep2_radarcaches", item = "cave" },
     ["ACHIEVEMENT_EVENT_EP2_RADARCACHE_HANGING"] = { collection = "ep2_radarcaches", item = "hanging" },
+
+    -- Episode One: its maps predate logic_achievement, so these come from HLRPG.MapInputEvents below
+    ["HLRPG_EP1_ELEVATOR_SHAFT_BOTTOM"] = "EP1_WATCH_YOUR_HEAD",
+    ["HLRPG_EP1_CORE_STARTED"] = { challengeStart = "ep1_pacifist", achievement = "EP1_PACIFIST" },
+    ["HLRPG_EP1_CORE_CONTAINED"] = "EP1_CONTAINMENT",
+    ["HLRPG_EP1_PACIFIST_END"] = { challengeEnd = "ep1_pacifist", achievement = "EP1_PACIFIST" },
+    ["HLRPG_EP1_GARAGE_ELEVATOR"] = "EP1_ELEVATOR_ACTION",
+    ["HLRPG_EP1_ESCORT_DONE"] = { challengeEnd = "ep1_citizen_escort", achievement = "EP1_CITIZEN_ESCORT" },
+}
+
+-- Episode One moments: when the named entity on that map receives the input, the event fires (sv_achievements.lua).
+-- Found by reading the maps' entity data, like the Half-Life 2 events above.
+HLRPG.MapInputEvents = {
+    -- Chapter 2: the main elevator reaches the bottom of the shaft
+    ep1_citadel_02b = {
+        { name = "finale_rl", input = "Trigger", event = "HLRPG_EP1_ELEVATOR_SHAFT_BOTTOM" },
+    },
+    -- Chapter 2: the core sequence starts (stalkers wake), and later the core is contained
+    ep1_citadel_03 = {
+        { name = "relay_core_enable", input = "Trigger", event = "HLRPG_EP1_CORE_STARTED" },
+        { name = "relay_core_completed", input = "Trigger", event = "HLRPG_EP1_CORE_CONTAINED" },
+        { name = "relay_core_completed", input = "Trigger", event = "HLRPG_EP1_PACIFIST_END" },
+    },
+    -- Chapter 3: the player and Alyx are both in the garage elevator and its doors close
+    ep1_c17_00a = {
+        { name = "player_elev_clip", input = "Enable", event = "HLRPG_EP1_GARAGE_ELEVATOR" },
+    },
+    -- Chapter 5: the citizens are escorted and Barney heads for the last train
+    ep1_c17_05 = {
+        { name = "relay_barney_head_for_train", input = "Trigger", event = "HLRPG_EP1_ESCORT_DONE" },
+    },
 }
 
 for i = 1, 9 do

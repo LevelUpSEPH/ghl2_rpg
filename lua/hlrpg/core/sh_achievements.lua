@@ -139,6 +139,21 @@ local EP1 = {
     EP1_ESCAPE_FROM_CITY_17 = { name = "Escape From City 17", desc = "Escape City 17 with Alyx", kills = 60, completeCampaign = "ep1" },
     -- Grenade checks (custom_achievement_listeners/sv_kill_achievements.lua)
     EP1_GRAVE_ROBBER = { name = "Grave Robber", desc = "Steal a Zombine's grenade", kills = 10, isGlobal = false },
+    -- Map moments (HLRPG.MapInputEvents in sh_achievement_events.lua), shared by everyone present
+    EP1_WATCH_YOUR_HEAD = { name = "Watch Your Head!", desc = "Make it to the bottom of the Citadel's main elevator shaft in one piece", kills = 20 },
+    EP1_CONTAINMENT = { name = "Containment", desc = "Contain the Citadel core", kills = 40 },
+    EP1_ELEVATOR_ACTION = { name = "Elevator Action", desc = "Survive long enough to get on the parking garage elevator", kills = 20 },
+    EP1_ATTICA = { name = "Attica!", desc = "Destroy the gunship in the hospital attic", kills = 30 },
+    -- Challenges (custom_achievement_listeners/sv_episode_one.lua): fail per player, paid at the end
+    EP1_PACIFIST = { name = "Pacifist", desc = "Contain the Citadel core without killing any stalkers", kills = 40 },
+    EP1_CITIZEN_ESCORT = { name = "Citizen Escort", desc = "Don't let any citizens die when escorting them to the escape train", kills = 40 },
+    EP1_ONE_FREE_BULLET = { name = "The One Free Bullet", desc = "Finish Episode One firing exactly one bullet. Grenade, crowbar, rocket, and Gravity Gun kills are okay!", kills = 150 },
+    -- Kill checks and counters (custom_achievement_listeners/sv_episode_one.lua)
+    EP1_THINK_FAST = { name = "Think Fast!", desc = "Kill an Elite Soldier with his own energy ball", kills = 15, isGlobal = false },
+    EP1_CONSERVATIONIST = { name = "Conservationist", desc = "Kill five enemies with the same energy ball", kills = 20, isGlobal = false },
+    EP1_CAR_CRUSHER = { name = "Car Crusher", desc = "Use the cars to squash 15 antlions in Episode One", kills = 20, counter = "ep1_car_crushes", goal = 15, isGlobal = false },
+    EP1_LIVE_BAIT = { name = "Live Bait", desc = "Help Alyx snipe 30 enemies in Episode One", kills = 20, counter = "ep1_alyx_snipes", goal = 30, isGlobal = false },
+    EP1_ZOMBIE_QUE = { name = "Zombie-que", desc = "Use flares to light 15 zombies on fire", kills = 20, counter = "ep1_flared_zombies", goal = 15, isGlobal = false },
 }
 
 -- Episode Two

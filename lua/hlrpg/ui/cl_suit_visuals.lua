@@ -30,6 +30,17 @@ local function ResetEntityRender(ent)
     ent:SetColor(Color(255, 255, 255, 255))
 end
 
+-- The client-side models drawn for a player's suit (suit body and fake head), e.g. for implant glow
+function HLRPG.GetSuitVisualEntities(ply)
+    local data = Visuals[ply:SteamID()]
+    local list = {}
+    if data then
+        if IsValid(data.Suit) then list[#list + 1] = data.Suit end
+        if IsValid(data.FakeHead) then list[#list + 1] = data.FakeHead end
+    end
+    return list
+end
+
 local function RemoveVisuals(sid)
     local data = Visuals[sid]
     if not data then return end

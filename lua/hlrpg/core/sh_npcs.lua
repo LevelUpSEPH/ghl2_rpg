@@ -97,6 +97,8 @@ HLRPG.BossKillUltCharge = 50
 
 function HLRPG.GetNPCName(ent)
     if not IsValid(ent) then return "Unknown" end
+    local custom = ent:GetNWString("HLRPG_NPCName", "") -- e.g. arena bosses (sv_arenas.lua)
+    if custom ~= "" then return custom end
     local class = ent:GetClass()
     local info = HLRPG.NPCNames[class]
     return info and info.name or class:gsub("npc_", ""):upper()

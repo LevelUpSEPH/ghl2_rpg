@@ -41,14 +41,17 @@ end
 
 -- Stats
 
+local function Signed(value) return (value >= 0 and "+" or "") .. value end
+
 DEF["bonus_health"] = {
-    Describe = function(value) return "+" .. value .. " max health" end,
-    Stats = function(ply, value, stats) stats.maxHealth = stats.maxHealth + value end
+    Describe = function(value) return Signed(value) .. " max health" end,
+    Stats = function(ply, value, stats) stats.maxHealth = math.max(1, stats.maxHealth + value) end
 }
 
+-- Negative values lower it (Synth Flesh Graft), never below 0
 DEF["bonus_armor"] = {
-    Describe = function(value) return "+" .. value .. " max armor" end,
-    Stats = function(ply, value, stats) stats.maxArmor = stats.maxArmor + value end
+    Describe = function(value) return Signed(value) .. " max armor" end,
+    Stats = function(ply, value, stats) stats.maxArmor = math.max(0, stats.maxArmor + value) end
 }
 
 local function AddHealth(ply, amount)
@@ -111,6 +114,13 @@ DEF["damage_resist"] = {
     Describe = function(value) return "Takes " .. math.Round(value * 100) .. "% less damage" end,
     OnTakeDamage = function(ply, value, attacker, dmginfo)
         dmginfo:ScaleDamage(1 - value)
+    end
+}
+
+DEF["bullet_resist"] = {
+    Describe = function(value) return "Takes " .. math.Round(value * 100, 1) .. "% less bullet damage" end,
+    OnTakeDamage = function(ply, value, attacker, dmginfo)
+        if dmginfo:IsBulletDamage() then dmginfo:ScaleDamage(1 - value) end
     end
 }
 
@@ -551,6 +561,50 @@ DEF["heal_aura"] = {
                 AddHealth(other, value)
             end
         end
+    end
+}
+
+-- Melee hits (crowbar, stunstick) also zap the target
+DEF["melee_zap"] = {
+    Describe = function(value) return "Melee hits zap for +" .. value .. " shock damage" end,
+    OnDealDamage = function(ply, value, target, dmginfo)
+        if bit.band(dmginfo:GetDamageType(), bit.bor(DMG_CLUB, DMG_SLASH)) == 0 then return end
+        dmginfo:AddDamage(value)
+        local effect = EffectData()
+        effect:SetEntity(target)
+        effect:SetMagnitude(2)
+        util.Effect("TeslaHitBoxes", effect)
+        target:EmitSound("ambient/energy/zap" .. math.random(1, 3) .. ".wav", 70, 140)
+    end
+}
+
+DEF["armor_aura"] = {
+    Describe = function(value) return "Recharges your and nearby players' armor " .. value .. "/s" end,
+    Think = function(ply, value)
+        for _, other in ipairs(player.GetAll()) do
+            if other:Alive() and other:GetPos():DistToSqr(ply:GetPos()) <= HEAL_AURA_RADIUS ^ 2 then
+                AddArmor(other, value)
+            end
+        end
+    end
+}
+
+-- Faster movement; applied by the SetupMove hook at the bottom (all speed bonuses added up)
+DEF["movement_speed"] = {
+    Describe = function(value) return "+" .. math.Round(value * 100) .. "% movement speed" end,
+}
+
+-- Outlines hostile NPCs within value units, through walls
+DEF["threat_scanner"] = {
+    Describe = function(value) return "Outlines enemies within " .. math.Round(value * 0.01905) .. "m, through walls" end,
+    DrawHalos = function(ply, value)
+        local targets = {}
+        for _, ent in ipairs(ents.FindInSphere(ply:GetPos(), value)) do
+            if ent:IsNPC() and ent:Health() > 0 and not HLRPG.FriendlyNPCs[ent:GetClass()] and not ent:GetNWBool("HLRPG_ISPET", false) then
+                targets[#targets + 1] = ent
+            end
+        end
+        if #targets > 0 then halo.Add(targets, Color(255, 70, 50), 1, 1, 1, true, true) end
     end
 }
 
@@ -1108,6 +1162,26 @@ function HLRPG.GetEquippedItems(ply)
     return items
 end
 
+-- The equipped implant's abilities right now (see GetActiveAbilities)
+function HLRPG.GetImplantAbilities(ply)
+    local kind = ply:GetNWString("HLRPG_ImplantKind", "")
+    if kind == "" or not HLRPG.Gear then return {} end
+    local implant = HLRPG.Gear.GetImplantValues(kind, ply:GetNWInt("HLRPG_ImplantRarity", 1), ply:GetNWFloat("HLRPG_ImplantRoll", 0.5))
+    if not implant then return {} end
+
+    local list = {}
+    for _, ability in ipairs(implant.passive) do list[#list + 1] = { id = ability.id, value = ability.value } end
+
+    local started = ply:GetNWFloat("HLRPG_ImplantActiveStart", 0)
+    if implant.active and started > 0 then
+        local elapsed = CurTime() - started
+        for _, ability in ipairs(implant.active.abilities) do
+            if elapsed < ability.duration then list[#list + 1] = { id = ability.id, value = ability.value } end
+        end
+    end
+    return list
+end
+
 -- Every ability instance ply has right now, as { id, value, scope }: stat points and milestones first
 -- (so items, e.g. a hat's fixed max health, can override them), then equipped items.
 function HLRPG.GetActiveAbilities(ply)
@@ -1119,6 +1193,17 @@ function HLRPG.GetActiveAbilities(ply)
             list[#list + 1] = { id = ability.id, value = ability.value, scope = item.scope }
         end
     end
+
+    -- Equipped gloves / chest rig (sv_gear.lua): plain stats, needed on the server only
+    if SERVER and HLRPG.GetGearAbilities then
+        for _, ability in ipairs(HLRPG.GetGearAbilities(ply)) do
+            list[#list + 1] = { id = ability.id, value = ability.value }
+        end
+    end
+
+    -- The equipped implant, on both realms (its abilities include prediction and visuals): its passive, and
+    -- while its active runs, the active's abilities. Networked by sv_gear.lua / sv_implants.lua.
+    for _, ability in ipairs(HLRPG.GetImplantAbilities(ply)) do list[#list + 1] = ability end
 
     return list
 end
@@ -1194,4 +1279,17 @@ end)
 
 hook.Add("SetupMove", "HLRPG_AbilityMove", function(ply, mv)
     HLRPG.RunAbilityHook(ply, "Move", mv)
+
+    -- movement_speed: Lambda sets the walk/run speeds from its settings when sprinting starts or stops, and the
+    -- engine bases each move on them, so they're set every tick: Lambda's speed times the player's bonus. This
+    -- also puts them back to normal as soon as a bonus ends. Both realms, so prediction agrees.
+    if not GAMEMODE.GetSetting or not ply.GetLambdaSprinting then return end
+    local mult = 1 + HLRPG.GetAbilityValue(ply, "movement_speed")
+    local walk = GAMEMODE:GetSetting("normspeed") * mult
+    local run = (ply:GetLambdaSprinting() and GAMEMODE:GetSetting("sprintspeed") or GAMEMODE:GetSetting("normspeed")) * mult
+    if ply:GetWalkSpeed() ~= walk then ply:SetWalkSpeed(walk) end
+    if ply:GetRunSpeed() ~= run then ply:SetRunSpeed(run) end
+    if ply:GetMaxSpeed() ~= run then ply:SetMaxSpeed(run) end
+    mv:SetMaxClientSpeed(run)
+    mv:SetMaxSpeed(run)
 end)

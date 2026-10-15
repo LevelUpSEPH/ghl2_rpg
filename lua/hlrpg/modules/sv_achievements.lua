@@ -117,9 +117,10 @@ function HLRPG.FailChallenge(ply, challenge, achID)
     ply:ChatPrint("[ACH] Challenge failed: " .. (ach and ach.name or challenge))
 end
 
-local function StartChallenge(challenge, achID)
+-- Starts a challenge for players (default: everyone present) who haven't earned its achievement yet
+local function StartChallenge(challenge, achID, players)
     local ach = HLRPG.Achievements[achID]
-    for _, ply in ipairs(player.GetAll()) do
+    for _, ply in ipairs(players or player.GetAll()) do
         if ply.HLRPG_Counters and not (ply.UnlockedAchievements or {})[achID] then
             ply.HLRPG_Counters[ChallengeKey(challenge)] = 1
             ply:SaveCounters()
@@ -139,6 +140,9 @@ local function EndChallenge(challenge, achID)
         end
     end
 end
+
+HLRPG.StartChallenge = StartChallenge
+HLRPG.EndChallenge = EndChallenge
 
 function HLRPG.AwardAchievementToAll(achID)
     for _, ply in ipairs(player.GetAll()) do
@@ -216,6 +220,20 @@ function HLRPG.OnAchievementEvent(event, activator)
         end
     end
 end
+
+-- Maps without logic_achievement (Episode One) report their moments through HLRPG.MapInputEvents: when the
+-- named entity receives the input, the listed event goes through OnAchievementEvent like a real map event
+hook.Add("AcceptInput", "HLRPG_MapInputEvents", function(ent, input, activator)
+    local list = HLRPG.MapInputEvents[game.GetMap():lower()]
+    if not list or not IsValid(ent) then return end
+
+    local name, inputName = ent:GetName(), string.lower(input)
+    for _, entry in ipairs(list) do
+        if entry.name == name and string.lower(entry.input) == inputName then
+            HLRPG.OnAchievementEvent(entry.event, activator)
+        end
+    end
+end)
 
 -- A challenge has to be played through in one go: leaving drops it, so rejoining later can't finish it
 hook.Add("PlayerDisconnected", "HLRPG_ChallengeBreak", function(ply)

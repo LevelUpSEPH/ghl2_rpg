@@ -309,6 +309,44 @@ HLRPG.Assets = {
         price = 3500,
         currency = "XP"
     },
+    -- Admin-only showcase pets: not in the shop or any reward; give with rpg_giveitem pet_hunter_green / _pink / _infernal / _sovereign.
+    -- material / extraMaterials are only here so sv_resources.lua sends the recoloured textures to players.
+    ["pet_hunter_green"] = {
+        name = "Toxic Hunter",
+        desc = "A Hunter with acid-green armor plates, pitch-black skin and eyes glowing the same acid green. Admin-only.",
+        model = "models/hunter.mdl",
+        material = "hlrpg/pets/hunter_armor_green",
+        extraMaterials = { "hlrpg/pets/hunter_skin_green" },
+        group = "Pets",
+        unbuyable = true
+    },
+    ["pet_hunter_pink"] = {
+        name = "Neon Hunter",
+        desc = "A Hunter with neon-pink armor plates, cotton-candy skin and baby-blue eyes. Admin-only.",
+        model = "models/hunter.mdl",
+        material = "hlrpg/pets/hunter_armor_pink",
+        extraMaterials = { "hlrpg/pets/hunter_skin_pink" },
+        group = "Pets",
+        unbuyable = true
+    },
+    ["pet_hunter_infernal"] = {
+        name = "Infernal Hunter",
+        desc = "A demonic Hunter: charred black-red skin, blood-red armor with ember edges and burning orange eyes. Admin-only.",
+        model = "models/hunter.mdl",
+        material = "hlrpg/pets/hunter_armor_infernal",
+        extraMaterials = { "hlrpg/pets/hunter_skin_infernal" },
+        group = "Pets",
+        unbuyable = true
+    },
+    ["pet_hunter_sovereign"] = {
+        name = "Sovereign Hunter",
+        desc = "Black skin veined with gold, solid gold armor and blood-red eyes. Admin-only.",
+        model = "models/hunter.mdl",
+        material = "hlrpg/pets/hunter_armor_sovereign",
+        extraMaterials = { "hlrpg/pets/hunter_skin_sovereign" },
+        group = "Pets",
+        unbuyable = true
+    },
 
     ["hat_metrocop"] = {
         name = "Metrocop Helmet",
