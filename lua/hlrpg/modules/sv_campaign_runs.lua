@@ -58,6 +58,40 @@ end
 hook.Add("LambdaPreChangelevel", "HLRPG_RunTime", BankRunTime)
 hook.Add("ShutDown", "HLRPG_RunTime", BankRunTime)
 
+-- Skipped maps. Walking through a map's own exit is a changelevel with a landmark; votes (skip map, change map,
+-- the end-of-campaign map vote) change level without one. Reloading the same map isn't a skip.
+function HLRPG.IsSkipChange(nextMap, landmark)
+    return (landmark == nil or landmark == "") and string.lower(nextMap or "") ~= game.GetMap():lower()
+end
+
+-- Once maps were skipped, finishing the campaign gives no completion achievements until a campaign is started
+-- again from its first map. Kept in a file because the map change reloads all Lua.
+local SKIPPED_FILE = "hlrpg/maps_skipped.txt"
+
+local function MapsWereSkipped() return file.Exists(SKIPPED_FILE, "DATA") end
+
+hook.Add("InitPostEntity", "HLRPG_SkippedReset", function()
+    local map = game.GetMap():lower()
+    for _, campaign in ipairs(HLRPG.Campaigns) do
+        if campaign.firstMap == map then file.Delete(SKIPPED_FILE) return end
+    end
+end)
+
+-- A skip ends everyone's run and fails their running challenges
+hook.Add("LambdaPreChangelevel", "HLRPG_MapSkipped", function(nextMap, landmark)
+    if not HLRPG.IsSkipChange(nextMap, landmark) then return end
+    file.CreateDir("hlrpg")
+    file.Write(SKIPPED_FILE, game.GetMap():lower() .. " > " .. tostring(nextMap))
+
+    for _, ply in ipairs(player.GetAll()) do
+        if ply.HLRPG_Run then
+            SaveRun(ply, nil)
+            ply:ChatPrint("[RUN] Your run ended: the map was skipped.")
+        end
+        HLRPG.FailAllChallenges(ply, "the map was skipped")
+    end
+end)
+
 local function Notify(ply, message)
     ply:ChatPrint("[RUN] " .. message)
 end
@@ -160,6 +194,14 @@ hook.Add("AcceptInput", "HLRPG_CampaignRunEnd", function(ent, input)
 
     local campaign, mapList = GetActiveCampaign()
     if not campaign then return end
+
+    if MapsWereSkipped() then
+        for _, ply in ipairs(player.GetAll()) do
+            ply:ChatPrint("[ACH] Maps were skipped on the way here, so this ending gives no completion achievements. " ..
+                "Start from " .. campaign.firstMap .. " to earn them.")
+        end
+        return
+    end
 
     hook.Run("HLRPG_CampaignCompleted", campaign.id)
 

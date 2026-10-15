@@ -72,9 +72,11 @@ hook.Add("PostCleanupMap", "HLRPG_MapTimerRestart", function()
     if mapStart then mapStart = CurTime() end
 end)
 
--- Only moving forward to the next map of the campaign counts (not restarts or going back)
+-- Only moving forward to the next map of the campaign through its exit counts (not restarts, going back, or
+-- votes skipping the map)
 hook.Add("LambdaPreChangelevel", "HLRPG_MapCleared", function(nextMap, landmark, restart)
     if restart or not mapStart or not GAMEMODE.GetMapList then return end
+    if HLRPG.IsSkipChange(nextMap, landmark) then return end
 
     local mapList = GAMEMODE:GetMapList() or {}
     local current = game.GetMap():lower()

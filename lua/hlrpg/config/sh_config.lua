@@ -23,11 +23,17 @@ HLRPG.Config.SafeMaps = {
     ["d1_trainstation_06"] = true,
 }
 
--- When the server has been empty for EmptyWait seconds, change to Map
+-- When the server has been empty for EmptyWait seconds, change to Map (or reload it, if someone played on it)
 HLRPG.Config.MapReset = {
     Map = "d1_trainstation_01",
     EmptyWait = 1800,
     CheckInterval = 60,
+}
+
+-- Maps that restart (failure, restart vote, everyone leaving) by loading the map again from scratch instead of
+-- Lambda's in-place cleanup, which leaves their scripted sequences broken
+HLRPG.Config.FullReloadMaps = {
+    ["d1_trainstation_01"] = true,
 }
 
 -- Base player models selectable from the F1 menu

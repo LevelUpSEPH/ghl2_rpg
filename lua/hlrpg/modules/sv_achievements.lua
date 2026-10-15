@@ -117,6 +117,24 @@ function HLRPG.FailChallenge(ply, challenge, achID)
     ply:ChatPrint("[ACH] Challenge failed: " .. (ach and ach.name or challenge))
 end
 
+-- Fails every challenge the player has running (e.g. when maps get skipped)
+function HLRPG.FailAllChallenges(ply, reason)
+    local counters = ply.HLRPG_Counters
+    if not counters then return end
+
+    local failed = 0
+    for key, value in pairs(counters) do
+        if value == 1 and string.StartWith(key, "challenge_") then
+            counters[key] = 0
+            failed = failed + 1
+        end
+    end
+    if failed == 0 then return end
+
+    ply:SaveCounters()
+    ply:ChatPrint("[ACH] " .. failed .. " challenge(s) failed: " .. reason .. ".")
+end
+
 -- Starts a challenge for players (default: everyone present) who haven't earned its achievement yet
 local function StartChallenge(challenge, achID, players)
     local ach = HLRPG.Achievements[achID]
