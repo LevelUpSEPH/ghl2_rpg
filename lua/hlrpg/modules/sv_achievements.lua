@@ -211,16 +211,16 @@ end
 function HLRPG.OnAchievementEvent(event, activator)
     hook.Run("HLRPG_AchievementEvent", event, activator)
 
+    -- A cache's map trigger only fires once, so a find counts for everyone on the server (co-op, like grubs)
     local lambda = HLRPG.LambdaMap[event]
     if lambda then
-        local ply = GetTriggeringPlayer(activator)
-        if not IsValid(ply) then return end
-
-        local xp = HLRPG.AwardLambda(ply, lambda.id)
-        net.Start("HLRPG_LambdaNotify")
-            net.WriteString(lambda.id)
-            net.WriteInt(xp, 32)
-        net.Send(ply)
+        for _, ply in ipairs(player.GetHumans()) do
+            local xp = HLRPG.AwardLambda(ply, lambda.id)
+            net.Start("HLRPG_LambdaNotify")
+                net.WriteString(lambda.id)
+                net.WriteInt(xp, 32)
+            net.Send(ply)
+        end
         return
     end
 

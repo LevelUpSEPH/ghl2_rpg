@@ -60,6 +60,16 @@ cd /root && rm -rf hlrpg-server && unzip -o hlrpg-server.zip && cd hlrpg-server 
 Updates the game files, the addon and Lambda, and restarts. Kept: player progress and leaderboards (`sv.db`), the
 welcome message, the token, and `server.cfg` once it has a hostname.
 
+## Map downloads (FastDL)
+
+`setup.sh` also runs a small web server (nginx, port 80) that hands players the Half-Life 2 campaign maps and the
+addon's textures, compressed, so players without Half-Life 2's maps can join. It compresses the maps the first time
+(a few minutes), then only new or changed files. The download URL is this server's IP; if that's wrong (the server
+sits behind NAT), set `FASTDL_HOST` at the top of `setup.sh` and run it again. Check it from your PC: opening
+`http://SERVER_IP/maps/d1_trainstation_01.bsp.bz2` in a browser should download a file.
+
+Episode maps aren't served: players need to own and install the episodes for their content anyway.
+
 ## Everyday use
 
 | What | Command |

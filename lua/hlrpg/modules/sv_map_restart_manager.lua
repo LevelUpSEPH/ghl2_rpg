@@ -4,6 +4,10 @@
 
 local cfg = HLRPG.Config.MapReset
 
+-- A dedicated server "hibernates" when nobody is on it, which pauses every Lua timer: the empty-server reset below
+-- would never fire (nor the session log's heartbeat). Keep it running; an empty server costs almost nothing.
+RunConsoleCommand("sv_hibernate_think", "1")
+
 -- Whether anyone has played on this map since it loaded (a map change reloads all Lua, so this starts false)
 local played = false
 hook.Add("PlayerInitialSpawn", "HLRPG_MapPlayed", function() played = true end)

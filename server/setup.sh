@@ -23,6 +23,12 @@ PORT=27015
 MAXPLAYERS=12
 START_MAP="d1_trainstation_01"
 
+# FastDL: players without Half-Life 2's maps (and everyone, for the addon's textures) download them over HTTP
+# from this server instead of through the game connection. Leave FASTDL_HOST empty to use this server's IP.
+FASTDL_DIR="/var/www/fastdl"
+FASTDL_PORT=80
+FASTDL_HOST=""
+
 say() { echo -e "\n\033[1;36m==> $*\033[0m"; }
 
 [[ $EUID -eq 0 ]] || { echo "Run with sudo: sudo bash setup.sh"; exit 1; }
@@ -36,7 +42,7 @@ APT=(apt-get -o DPkg::Lock::Timeout=900)
 dpkg --add-architecture i386
 "${APT[@]}" update -y
 DEBIAN_FRONTEND=noninteractive "${APT[@]}" install -y \
-    curl ca-certificates tar tmux rsync \
+    curl ca-certificates tar tmux rsync bzip2 nginx \
     lib32gcc-s1 lib32stdc++6 lib32z1 libncurses5:i386 libtinfo5:i386
 
 if ! id "$USER_NAME" &>/dev/null; then
@@ -107,6 +113,54 @@ mkdir -p "$GMOD/addons" "$GMOD/gamemodes"
 rsync -a --delete "$BUNDLE/addon/" "$GMOD/addons/halflife_rpg/"
 rsync -a --delete "$BUNDLE/lambda/" "$GMOD/gamemodes/lambda/"
 
+say "Preparing FastDL (compressed maps and addon files for players to download)"
+# Once a download URL is set, players fetch every file from it (falling back to the game server doesn't work
+# reliably), so it mirrors everything the server sends: the HL2 campaign maps, the addon's materials and
+# Lambda's content. Each file is stored bzip2-compressed (players' downloads are a third of the size) next to
+# the original. Only new or changed files are compressed again.
+mkdir -p "$FASTDL_DIR/maps"
+for bsp in "$HL2_MAPS"/d?_*.bsp; do
+    [[ -f "$bsp" ]] || continue
+    target="$FASTDL_DIR/maps/$(basename "$bsp").bz2"
+    if [[ ! -f "$target" || "$bsp" -nt "$target" ]]; then
+        echo "  compressing $(basename "$bsp")"
+        bzip2 -c -9 "$bsp" > "$target.tmp" && mv "$target.tmp" "$target"
+    fi
+done
+# The game server only offers players maps from Garry's Mod's own maps folder, not from mounted games: link them
+mkdir -p "$GMOD/maps"
+for bsp in "$HL2_MAPS"/d?_*.bsp; do
+    if [[ -f "$bsp" ]]; then ln -sf "$bsp" "$GMOD/maps/$(basename "$bsp")"; fi
+done
+rsync -a "$BUNDLE/addon/materials/" "$FASTDL_DIR/materials/"
+for dir in materials models sound; do
+    if [[ -d "$BUNDLE/lambda/content/$dir" ]]; then rsync -a "$BUNDLE/lambda/content/$dir/" "$FASTDL_DIR/$dir/"; fi
+done
+find "$FASTDL_DIR" -type f ! -name '*.bz2' ! -path "$FASTDL_DIR/maps/*" | while read -r f; do
+    if [[ ! -f "$f.bz2" || "$f" -nt "$f.bz2" ]]; then bzip2 -k -f -9 "$f"; fi
+done
+chmod -R a+rX "$FASTDL_DIR"
+echo "  $(ls "$FASTDL_DIR/maps" | wc -l) maps ready, $(du -sh "$FASTDL_DIR" | cut -f1) in total"
+
+# nginx serves the folder as static files only (no listing)
+cat > /etc/nginx/sites-available/fastdl <<EOF
+server {
+    listen $FASTDL_PORT default_server;
+    listen [::]:$FASTDL_PORT default_server;
+    root $FASTDL_DIR;
+    autoindex off;
+    location / { try_files \$uri =404; }
+}
+EOF
+rm -f /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/fastdl /etc/nginx/sites-enabled/fastdl
+nginx -t && systemctl enable nginx && systemctl reload-or-restart nginx
+
+[[ -n "$FASTDL_HOST" ]] || FASTDL_HOST="$(hostname -I | awk '{print $1}')"
+FASTDL_URL="http://$FASTDL_HOST"
+[[ "$FASTDL_PORT" == "80" ]] || FASTDL_URL="$FASTDL_URL:$FASTDL_PORT"
+echo "  Download URL: $FASTDL_URL/"
+
 # GMod creates an empty placeholder server.cfg itself, so only one with a hostname counts as already set up
 if ! grep -q '^[[:space:]]*hostname' "$GMOD/cfg/server.cfg" 2>/dev/null; then
     cp "$BUNDLE/server.cfg" "$GMOD/cfg/server.cfg"
@@ -150,7 +204,7 @@ cat > "$HOME_DIR/start.sh" <<EOF
 #!/usr/bin/env bash
 # srcds_run restarts the server by itself if it crashes
 cd "$SERVER"
-exec ./srcds_run -game garrysmod -console -port $PORT -tickrate 66 +maxplayers $MAXPLAYERS $GSLT_ARG +gamemode hl2campaign +map $START_MAP
+exec ./srcds_run -game garrysmod -console -port $PORT -tickrate 66 +maxplayers $MAXPLAYERS $GSLT_ARG +sv_downloadurl "$FASTDL_URL/" +sv_allowdownload 1 +gamemode hl2campaign +map $START_MAP
 EOF
 chmod 700 "$HOME_DIR/start.sh"
 chown "$USER_NAME:$USER_NAME" "$HOME_DIR/start.sh"
@@ -181,6 +235,7 @@ if command -v ufw &>/dev/null && ufw status | grep -q "Status: active"; then
     ufw allow 22/tcp
     ufw allow $PORT/udp
     ufw allow $PORT/tcp
+    ufw allow $FASTDL_PORT/tcp
 fi
 
 say "Starting the server"
